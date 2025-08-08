@@ -41,11 +41,6 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
     });
     return initial;
   });
-  const [enabled, setEnabled] = useState<boolean>(() => {
-    // If every day is closed, consider disabled
-    const anyOpen = Object.values(local).some((d) => !d.closed);
-    return anyOpen;
-  });
 
   // Styled toggle button
   const Switch = ({ checked, onToggle, disabled = false }: { checked: boolean; onToggle: () => void; disabled?: boolean }) => (
@@ -63,14 +58,13 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
   );
 
   useEffect(() => {
-    // Sync outward as a map of strings per day
     const out: Record<string, string> = {};
     for (const day of DAYS) {
       const d = local[day.key];
-      out[day.key] = (!enabled || d.closed) ? "Closed" : formatTimeRange(d.open, d.close);
+      out[day.key] = d.closed ? "Closed" : formatTimeRange(d.open, d.close);
     }
     onChange(out);
-  }, [local, enabled, onChange]);
+  }, [local, onChange]);
 
   const applyToRange = (fromKey: string, rangeKeys: string[]) => {
     const src = local[fromKey];
@@ -82,24 +76,12 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
     setLocal(next);
   };
 
-  const setGlobalEnabled = (nextVal: boolean) => {
-    setEnabled(nextVal);
-    if (!nextVal) {
-      // Keep open/close values, but treat as closed when exporting
-      return;
-    }
-  };
-
   return (
     <div className="rounded-2xl border bg-white shadow-sm">
       <div className="flex items-center justify-between p-4">
         <div>
           <div className="text-base font-semibold">Business hours</div>
           <div className="text-xs text-gray-500">Control how your location works at different times of day</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Enable</span>
-          <Switch checked={enabled} onToggle={() => setGlobalEnabled(!enabled)} />
         </div>
       </div>
 
@@ -137,14 +119,13 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
           </div>
           <div className="divide-y">
             {DAYS.map((d) => {
-              const isClosed = !enabled || local[d.key]?.closed;
+              const isClosed = local[d.key]?.closed;
               return (
                 <div key={d.key} className="grid grid-cols-12 items-center gap-3 px-4 py-3">
                   <div className="col-span-4 sm:col-span-3 flex items-center gap-3">
                     <Switch
-                      checked={!local[d.key]?.closed && enabled}
+                      checked={!local[d.key]?.closed}
                       onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
-                      disabled={!enabled}
                     />
                     <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
                   </div>
@@ -454,7 +435,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   const defaultCenter = { lat: values.coordinates?.lat ?? 37.7749, lon: values.coordinates?.lon ?? -122.4194 };
 
   return (
-    <div className="max-w-2xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
+    <div className="max-w-4xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
       <AnimatePresence mode="wait">
         <motion.form
           key={current.key}
