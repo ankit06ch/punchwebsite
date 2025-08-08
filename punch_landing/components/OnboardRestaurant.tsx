@@ -147,6 +147,7 @@ function CuisineTags({ value, onChange }: { value: string[] | undefined; onChang
   const selected = value ?? [];
   const [addingOther, setAddingOther] = useState(false);
   const [otherText, setOtherText] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   const toggleTag = (tag: string) => {
     const exists = selected.includes(tag);
@@ -162,10 +163,12 @@ function CuisineTags({ value, onChange }: { value: string[] | undefined; onChang
     setAddingOther(false);
   };
 
+  const visibleSuggestions = showAll ? CUISINE_SUGGESTIONS : CUISINE_SUGGESTIONS.slice(0, 12);
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {CUISINE_SUGGESTIONS.map((c) => (
+        {visibleSuggestions.map((c) => (
           <button
             key={c}
             type="button"
@@ -175,6 +178,15 @@ function CuisineTags({ value, onChange }: { value: string[] | undefined; onChang
             {c}
           </button>
         ))}
+        {CUISINE_SUGGESTIONS.length > 12 && (
+          <button
+            type="button"
+            onClick={() => setShowAll(!showAll)}
+            className="px-3 py-1 rounded-full text-sm border bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
+          >
+            {showAll ? "Show less" : "See more"}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setAddingOther(true)}
@@ -269,7 +281,7 @@ function MapPreview({ lat, lon }: { lat: number; lon: number }) {
 // ---------------- Steps ----------------
 const steps = [
   { key: "name", label: "Restaurant Name", placeholder: "Sushi Town", type: "text" },
-  { key: "cuisine", label: "Cuisine", placeholder: "Sushi", type: "cuisines" },
+  { key: "cuisine", label: "Cuisine and tags", placeholder: "Sushi", type: "cuisines" },
   { key: "price", label: "Price", placeholder: "$$$", type: "text" },
   { key: "location", label: "Address", placeholder: "123 Main St, San Francisco, CA", type: "address" },
   { key: "hours", label: "Hours", type: "hours" },
@@ -410,8 +422,8 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
         >
           <div className="flex items-center justify-between">
             <label className="block text-lg font-semibold" htmlFor={current.key}>
-            {current.label}
-          </label>
+              {current.label}
+            </label>
             <div className="text-sm text-gray-400">Step {step + 1} of {steps.length}</div>
           </div>
 
@@ -460,19 +472,19 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           )}
 
           {current.type !== "hours" && current.type !== "address" && current.type !== "cuisines" && (
-          <input
-            id={current.key}
-            name={current.key}
-            type={current.type}
-            min={current.min}
-            max={current.max}
-            step={current.step}
-            placeholder={current.placeholder}
-            value={values[current.key] || ""}
-            onChange={handleChange}
+            <input
+              id={current.key}
+              name={current.key}
+              type={current.type}
+              min={current.min}
+              max={current.max}
+              step={current.step}
+              placeholder={current.placeholder}
+              value={values[current.key] || ""}
+              onChange={handleChange}
               className="form-input w-full py-2"
-            autoFocus
-          />
+              autoFocus
+            />
           )}
 
           {error && <div className="text-red-600 text-sm">{error}</div>}
@@ -486,12 +498,12 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
             >
               Back
             </button>
-          <button
-            type="submit"
+            <button
+              type="submit"
               className="btn bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]"
-          >
+            >
               {step < steps.length - 1 ? "Next" : "Finish"}
-          </button>
+            </button>
           </div>
         </motion.form>
       </AnimatePresence>
