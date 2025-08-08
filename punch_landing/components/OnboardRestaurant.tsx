@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
+import L from "leaflet";
 
 // ---------------- Hours Editor ----------------
 const DAYS: Array<{ key: string; label: string }> = [
@@ -134,34 +135,56 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
   );
 }
 
-// ---------------- Map (dark) ----------------
-const MapInner = ({ center, mapKey }: { center: { lat: number; lng: number }, mapKey: string }) => {
-  // Require locally to avoid SSR issues
-  const { MapContainer, TileLayer, Marker } = require("react-leaflet");
-  return (
-    <MapContainer key={mapKey} center={center} zoom={15} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-      />
-      <Marker position={center} />
-    </MapContainer>
-  );
-};
+// ---------------- Map (dark) - raw Leaflet ----------------
+function RawLeafletMap({ lat, lon }: { lat: number; lon: number }) {
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
 
-const MapClient = dynamic(async () => MapInner, { ssr: false });
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    if (!mapRef.current) {
+      // Initialize map once
+      const map = L.map(mapContainerRef.current, { zoomControl: false, scrollWheelZoom: false });
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }).addTo(map);
+      mapRef.current = map;
+    }
+
+    const map = mapRef.current!;
+    map.setView([lat, lon], 15);
+
+    if (!markerRef.current) {
+      markerRef.current = L.marker([lat, lon]).addTo(map);
+    } else {
+      markerRef.current.setLatLng([lat, lon]);
+    }
+
+    return () => {
+      // Do not destroy on every re-render; only when unmounting the component
+    };
+  }, [lat, lon]);
+
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      markerRef.current = null;
+    };
+  }, []);
+
+  return <div ref={mapContainerRef} className="h-56 w-full overflow-hidden rounded-lg border" />;
+}
 
 function MapPreview({ lat, lon }: { lat: number; lon: number }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const center = useMemo(() => ({ lat, lng: lon }), [lat, lon]);
-  const mapKey = useMemo(() => `map-${lat}-${lon}`, [lat, lon]);
   if (!mounted) return <div className="h-56 w-full overflow-hidden rounded-lg border" />;
-  return (
-    <div className="h-56 w-full overflow-hidden rounded-lg border">
-      <MapClient center={center} mapKey={mapKey} />
-    </div>
-  );
+  return <RawLeafletMap lat={lat} lon={lon} />;
 }
 
 // ---------------- Steps ----------------
