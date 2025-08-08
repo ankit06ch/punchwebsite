@@ -1,201 +1,173 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import dynamic from "next/dynamic";
 
-// Hours dropdown component
-function HoursSelector({ value, onChange }: { value: any, onChange: (value: any) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<string>("");
-  
-  const days = [
-    { key: "Mon-Thu", label: "Monday - Thursday" },
-    { key: "Fri-Sat", label: "Friday - Saturday" },
-    { key: "Sun", label: "Sunday" }
-  ];
+// ---------------- Hours Editor ----------------
+const DAYS: Array<{ key: string; label: string }> = [
+  { key: "Mon", label: "Monday" },
+  { key: "Tue", label: "Tuesday" },
+  { key: "Wed", label: "Wednesday" },
+  { key: "Thu", label: "Thursday" },
+  { key: "Fri", label: "Friday" },
+  { key: "Sat", label: "Saturday" },
+  { key: "Sun", label: "Sunday" },
+];
 
-  const timeSlots = [
-    "Closed",
-    "6:00 AM – 10:00 AM",
-    "6:00 AM – 11:00 AM", 
-    "7:00 AM – 10:00 AM",
-    "7:00 AM – 11:00 AM",
-    "8:00 AM – 10:00 AM",
-    "8:00 AM – 11:00 AM",
-    "9:00 AM – 10:00 AM",
-    "9:00 AM – 11:00 AM",
-    "10:00 AM – 2:00 PM",
-    "10:00 AM – 3:00 PM",
-    "10:00 AM – 4:00 PM",
-    "10:00 AM – 5:00 PM",
-    "10:00 AM – 6:00 PM",
-    "10:00 AM – 7:00 PM",
-    "10:00 AM – 8:00 PM",
-    "10:00 AM – 9:00 PM",
-    "10:00 AM – 10:00 PM",
-    "10:00 AM – 11:00 PM",
-    "11:00 AM – 2:00 PM",
-    "11:00 AM – 3:00 PM",
-    "11:00 AM – 4:00 PM",
-    "11:00 AM – 5:00 PM",
-    "11:00 AM – 6:00 PM",
-    "11:00 AM – 7:00 PM",
-    "11:00 AM – 8:00 PM",
-    "11:00 AM – 9:00 PM",
-    "11:00 AM – 10:00 PM",
-    "11:00 AM – 11:00 PM",
-    "12:00 PM – 2:00 PM",
-    "12:00 PM – 3:00 PM",
-    "12:00 PM – 4:00 PM",
-    "12:00 PM – 5:00 PM",
-    "12:00 PM – 6:00 PM",
-    "12:00 PM – 7:00 PM",
-    "12:00 PM – 8:00 PM",
-    "12:00 PM – 9:00 PM",
-    "12:00 PM – 10:00 PM",
-    "12:00 PM – 11:00 PM",
-    "1:00 PM – 5:00 PM",
-    "1:00 PM – 6:00 PM",
-    "1:00 PM – 7:00 PM",
-    "1:00 PM – 8:00 PM",
-    "1:00 PM – 9:00 PM",
-    "1:00 PM – 10:00 PM",
-    "1:00 PM – 11:00 PM",
-    "2:00 PM – 6:00 PM",
-    "2:00 PM – 7:00 PM",
-    "2:00 PM – 8:00 PM",
-    "2:00 PM – 9:00 PM",
-    "2:00 PM – 10:00 PM",
-    "2:00 PM – 11:00 PM",
-    "3:00 PM – 7:00 PM",
-    "3:00 PM – 8:00 PM",
-    "3:00 PM – 9:00 PM",
-    "3:00 PM – 10:00 PM",
-    "3:00 PM – 11:00 PM",
-    "4:00 PM – 8:00 PM",
-    "4:00 PM – 9:00 PM",
-    "4:00 PM – 10:00 PM",
-    "4:00 PM – 11:00 PM",
-    "5:00 PM – 9:00 PM",
-    "5:00 PM – 10:00 PM",
-    "5:00 PM – 11:00 PM",
-    "6:00 PM – 10:00 PM",
-    "6:00 PM – 11:00 PM",
-    "7:00 PM – 11:00 PM",
-    "8:00 PM – 11:00 PM",
-    "9:00 PM – 11:00 PM",
-    "10:00 PM – 11:00 PM"
-  ];
+function formatTimeRange(open: string, close: string): string {
+  if (!open || !close) return "";
+  const to12h = (t: string) => {
+    const [hStr, m] = t.split(":");
+    let h = parseInt(hStr, 10);
+    const ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12;
+    if (h === 0) h = 12;
+    return `${h}:${m} ${ampm}`;
+    };
+  return `${to12h(open)} – ${to12h(close)}`;
+}
 
-  const handleDaySelect = (dayKey: string) => {
-    setSelectedDay(dayKey);
-    setIsOpen(false);
-  };
+function HoursEditor({ value, onChange }: { value: Record<string, string> | undefined; onChange: (v: Record<string, string>) => void }) {
+  const [local, setLocal] = useState<Record<string, { closed: boolean; open: string; close: string }>>(() => {
+    const initial: Record<string, { closed: boolean; open: string; close: string }> = {};
+    DAYS.forEach((d) => {
+      const existing = value?.[d.key];
+      if (!existing || existing === "Closed") {
+        initial[d.key] = { closed: !existing ? true : existing === "Closed", open: "11:00", close: "21:00" };
+      } else {
+        // Parse back best-effort; default to typical hours
+        initial[d.key] = { closed: false, open: "11:00", close: "21:00" };
+      }
+    });
+    return initial;
+  });
 
-  const handleTimeSelect = (timeSlot: string) => {
-    const newHours = { ...value };
-    newHours[selectedDay] = timeSlot;
-    onChange(newHours);
-    setSelectedDay("");
-  };
-
-  const getDisplayValue = () => {
-    if (!value || Object.keys(value).length === 0) {
-      return "Select hours for each day...";
+  useEffect(() => {
+    // Sync outward as a map of strings per day
+    const out: Record<string, string> = {};
+    for (const day of DAYS) {
+      const d = local[day.key];
+      out[day.key] = d.closed ? "Closed" : formatTimeRange(d.open, d.close);
     }
-    
-    const entries = Object.entries(value);
-    if (entries.length === 0) return "Select hours for each day...";
-    
-    return `${entries.length} day${entries.length > 1 ? 's' : ''} configured`;
+    onChange(out);
+  }, [local, onChange]);
+
+  const applyToRange = (fromKey: string, rangeKeys: string[]) => {
+    const src = local[fromKey];
+    if (!src) return;
+    const next = { ...local };
+    for (const k of rangeKeys) {
+      next[k] = { ...src };
+    }
+    setLocal(next);
   };
 
   return (
-    <div className="space-y-4">
-      {/* Display current selections */}
-      <div className="border rounded-lg p-3 bg-gray-50">
-        <div className="text-sm font-medium text-gray-700 mb-2">Configured Hours:</div>
-        {value && Object.keys(value).length > 0 ? (
-          <div className="space-y-1">
-            {Object.entries(value).map(([day, time]) => (
-              <div key={day} className="flex justify-between items-center text-sm">
-                <span className="font-medium">{days.find(d => d.key === day)?.label || day}:</span>
-                <span className="text-gray-600">{time as string}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newHours = { ...value };
-                    delete newHours[day];
-                    onChange(newHours);
-                  }}
-                  className="text-red-500 hover:text-red-700 text-xs"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-gray-500 text-sm">No hours configured yet</div>
-        )}
-      </div>
-
-      {/* Day selector */}
-      <div className="relative">
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2 mb-1">
+        <span className="text-sm text-gray-600">Quick apply:</span>
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full text-left px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#FB7A20] focus:border-[#FB7A20]"
+          className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
+          onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu"]) }
         >
-          {selectedDay ? days.find(d => d.key === selectedDay)?.label : "Select a day..."}
+          Mon → Mon-Thu
         </button>
-        
-        {isOpen && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-            {days.map((day) => (
-              <button
-                key={day.key}
-                type="button"
-                onClick={() => handleDaySelect(day.key)}
-                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100"
-              >
-                {day.label}
-              </button>
-            ))}
-          </div>
-        )}
+        <button
+          type="button"
+          className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
+          onClick={() => applyToRange("Fri", ["Fri", "Sat"]) }
+        >
+          Fri → Fri-Sat
+        </button>
+        <button
+          type="button"
+          className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
+          onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]) }
+        >
+          Mon → Weekdays+Sat
+        </button>
+        <button
+          type="button"
+          className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
+          onClick={() => applyToRange("Sun", ["Sun"]) }
+        >
+          Sun only
+        </button>
       </div>
-
-      {/* Time slot selector */}
-      {selectedDay && (
-        <div className="relative">
-          <div className="text-sm font-medium text-gray-700 mb-2">
-            Select hours for {days.find(d => d.key === selectedDay)?.label}:
+      <div className="divide-y rounded-lg border bg-white">
+        {DAYS.map((d) => (
+          <div key={d.key} className="grid grid-cols-12 items-center gap-3 p-3">
+            <div className="col-span-3 sm:col-span-2 font-medium text-sm">{d.label}</div>
+            <label className="col-span-3 sm:col-span-2 inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={local[d.key]?.closed || false}
+                onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "11:00", close: "21:00" }), closed: e.target.checked } }))}
+              />
+              Closed
+            </label>
+            <div className="col-span-3 sm:col-span-3">
+              <input
+                type="time"
+                className="form-input w-full py-2"
+                disabled={local[d.key]?.closed}
+                value={local[d.key]?.open || "11:00"}
+                onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "21:00" }), open: e.target.value } }))}
+              />
+            </div>
+            <div className="col-span-3 sm:col-span-3">
+              <input
+                type="time"
+                className="form-input w-full py-2"
+                disabled={local[d.key]?.closed}
+                value={local[d.key]?.close || "21:00"}
+                onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "11:00" }), close: e.target.value } }))}
+              />
+            </div>
           </div>
-          <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-md">
-            {timeSlots.map((timeSlot) => (
-              <button
-                key={timeSlot}
-                type="button"
-                onClick={() => handleTimeSelect(timeSlot)}
-                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 border-b border-gray-200 last:border-b-0"
-              >
-                {timeSlot}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
+      <div className="text-xs text-gray-500">Hours will be saved per-day, e.g. <code>{"{\"Mon\":\"11:00 AM – 9:00 PM\"}"}</code>. Closed days are saved as "Closed".</div>
     </div>
   );
 }
 
+// ---------------- Map (dark) ----------------
+const MapInner = ({ center }: { center: { lat: number; lng: number } }) => {
+  // Require locally to avoid SSR issues
+  const { MapContainer, TileLayer, Marker } = require("react-leaflet");
+  return (
+    <MapContainer center={center} zoom={15} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      />
+      <Marker position={center} />
+    </MapContainer>
+  );
+};
+
+const MapClient = dynamic(async () => MapInner, { ssr: false });
+
+function MapPreview({ lat, lon }: { lat: number; lon: number }) {
+  const center = useMemo(() => ({ lat, lng: lon }), [lat, lon]);
+  return (
+    <div className="h-56 w-full overflow-hidden rounded-lg border">
+      <MapClient center={center} />
+    </div>
+  );
+}
+
+// ---------------- Steps ----------------
 const steps = [
+  { key: "name", label: "Restaurant Name", placeholder: "Sushi Town", type: "text" },
   { key: "cuisine", label: "Cuisine", placeholder: "Sushi", type: "text" },
-  { key: "location", label: "Location", placeholder: "123 Main St, San Francisco, CA", type: "text" },
+  { key: "price", label: "Price", placeholder: "$$$", type: "text" },
+  { key: "location", label: "Address", placeholder: "123 Main St, San Francisco, CA", type: "address" },
   { key: "hours", label: "Hours", type: "hours" },
   { key: "logoUrl", label: "Logo URL", placeholder: "https://placehold.co/64x64?text=S", type: "url" },
-  { key: "name", label: "Restaurant Name", placeholder: "Sushi Town", type: "text" },
-  { key: "price", label: "Price", placeholder: "$$$", type: "text" },
   { key: "rating", label: "Rating", placeholder: "4.7", type: "number", min: 0, max: 5, step: 0.1 },
 ];
 
@@ -207,34 +179,75 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
 
   const current = steps[step];
 
+  // Address validation + geocode
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState("");
+
+  const geocodeAddress = async (query: string) => {
+    if (!query || query.trim().length < 5) {
+      setGeoError("Please enter a full address.");
+      return;
+    }
+    setGeoLoading(true);
+    setGeoError("");
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+      const res = await fetch(url, { headers: { "Accept": "application/json" } });
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        setGeoError("Address not found. Please refine it.");
+        setValues((prev: any) => ({ ...prev, coordinates: undefined }));
+        return;
+      }
+      const hit = data[0];
+      const lat = parseFloat(hit.lat);
+      const lon = parseFloat(hit.lon);
+      const displayName = hit.display_name as string;
+      setValues((prev: any) => ({ ...prev, location: displayName, coordinates: { lat, lon } }));
+    } catch (e) {
+      setGeoError("Failed to validate address. Try again.");
+    } finally {
+      setGeoLoading(false);
+    }
+  };
+
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     const value = values[current.key];
-    
+
     if (current.type === "hours") {
-      if (!value || Object.keys(value).length === 0) {
-        setError("Please configure hours for at least one day.");
+      if (!value || Object.keys(value).length !== 7) {
+        setError("Please configure hours for all days.");
+        return;
+      }
+    } else if (current.type === "address") {
+      if (!values.coordinates) {
+        setError("Please validate your address before continuing.");
         return;
       }
     } else if (!value || (current.type === "number" && isNaN(Number(value)))) {
       setError("Please enter a valid value.");
       return;
     }
-    
+
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      // Return collected values to the parent to finish account creation and persistence there
       onComplete({ ...values });
     }
+  };
+
+  const handleBack = () => {
+    setError("");
+    if (step > 0) setStep(step - 1);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValues({ ...values, [current.key]: e.target.value });
   };
 
-  const handleHoursChange = (hours: any) => {
+  const handleHoursChange = (hours: Record<string, string>) => {
     setValues({ ...values, hours });
   };
 
@@ -258,26 +271,61 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   }
 
   return (
-    <div className="max-w-md mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
+    <div className="max-w-2xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
       <AnimatePresence mode="wait">
         <motion.form
           key={current.key}
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -40 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.3 }}
           onSubmit={handleNext}
+          className="space-y-4"
         >
-          <label className="block text-lg font-semibold mb-4" htmlFor={current.key}>
-            {current.label}
-          </label>
-          
-          {current.type === "hours" ? (
-            <HoursSelector 
-              value={values[current.key] || {}} 
-              onChange={handleHoursChange}
-            />
-          ) : (
+          <div className="flex items-center justify-between">
+            <label className="block text-lg font-semibold" htmlFor={current.key}>
+              {current.label}
+            </label>
+            <div className="text-sm text-gray-400">Step {step + 1} of {steps.length}</div>
+          </div>
+
+          {current.type === "hours" && (
+            <HoursEditor value={values[current.key]} onChange={handleHoursChange} />
+          )}
+
+          {current.type === "address" && (
+            <div className="space-y-3">
+              <input
+                id={current.key}
+                name={current.key}
+                type="text"
+                placeholder={current.placeholder}
+                value={values[current.key] || ""}
+                onChange={(e) => setValues((prev: any) => ({ ...prev, [current.key]: e.target.value }))}
+                className="form-input w-full py-2"
+                autoFocus
+              />
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => geocodeAddress(values[current.key] || "")} className="btn bg-[#FB7A20] text-white hover:bg-[#e66a1a] px-4 py-2">
+                  {geoLoading ? "Validating..." : "Validate & Locate"}
+                </button>
+                {values.coordinates && !geoLoading && !geoError && (
+                  <span className="text-sm text-green-700">Address validated</span>
+                )}
+              </div>
+              {geoError && <div className="text-red-600 text-sm">{geoError}</div>}
+              {values.coordinates && (
+                <div>
+                  <div className="h-56 w-full overflow-hidden rounded-lg border">
+                    <MapClient center={{ lat: values.coordinates.lat, lng: values.coordinates.lon }} />
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">Dark map preview. Pin shows the validated location.</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {current.type !== "hours" && current.type !== "address" && (
             <input
               id={current.key}
               name={current.key}
@@ -288,24 +336,31 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
               placeholder={current.placeholder}
               value={values[current.key] || ""}
               onChange={handleChange}
-              className="form-input w-full py-2 mb-2"
+              className="form-input w-full py-2"
               autoFocus
             />
           )}
-          
-          {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
-          <button
-            type="submit"
-            className="btn w-full bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]"
-            disabled={loading}
-          >
-            {step < steps.length - 1 ? "Next" : "Finish"}
-          </button>
+
+          {error && <div className="text-red-600 text-sm">{error}</div>}
+
+          <div className="flex items-center justify-between pt-2">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              disabled={step === 0}
+            >
+              Back
+            </button>
+            <button
+              type="submit"
+              className="btn bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]"
+            >
+              {step < steps.length - 1 ? "Next" : "Finish"}
+            </button>
+          </div>
         </motion.form>
       </AnimatePresence>
-      <div className="mt-4 text-center text-gray-400 text-sm">
-        Step {step + 1} of {steps.length}
-      </div>
     </div>
   );
 } 
