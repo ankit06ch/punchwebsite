@@ -374,9 +374,10 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
 
   // Default map center if not yet selected
   const defaultCenter = { lat: values.coordinates?.lat ?? 37.7749, lon: values.coordinates?.lon ?? -122.4194 };
+  const containerMaxWidth = current?.type === "hours" ? "max-w-6xl" : "max-w-3xl";
 
   return (
-    <div className="max-w-screen-2xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
+    <div className={`${containerMaxWidth} mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl`}>
       <AnimatePresence mode="wait">
         <motion.form
           key={current.key}
