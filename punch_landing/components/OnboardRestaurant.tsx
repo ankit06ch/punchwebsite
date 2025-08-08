@@ -304,7 +304,7 @@ function MapPreview({ lat, lon }: { lat: number; lon: number }) {
 
 // ---------------- Steps ----------------
 const steps = [
-  { key: "name", label: "Restaurant Name", placeholder: "Sushi Town", type: "text" },
+  { key: "name", label: "Business Name", placeholder: "Sushi Town", type: "text" },
   { key: "cuisine", label: "Cuisine and tags", placeholder: "Sushi", type: "cuisines" },
   { key: "price", label: "Price", placeholder: "$$$", type: "text" },
   { key: "location", label: "Address", placeholder: "123 Main St, San Francisco, CA", type: "address" },
