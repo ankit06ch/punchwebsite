@@ -72,7 +72,13 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
               <div className="md:col-span-4 flex items-center gap-4">
                 <Switch
                   checked={!local[d.key]?.closed}
-                  onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
+                  onToggle={() => setLocal((prev) => ({
+                    ...prev,
+                    [d.key]: {
+                      ...(prev[d.key] || { open: "09:00", close: "17:30" }),
+                      closed: !(prev[d.key]?.closed ?? true),
+                    },
+                  }))}
                 />
                 <span className={`text-base ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
               </div>
