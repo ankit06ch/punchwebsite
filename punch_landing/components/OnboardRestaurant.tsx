@@ -34,24 +34,43 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
     DAYS.forEach((d) => {
       const existing = value?.[d.key];
       if (!existing || existing === "Closed") {
-        initial[d.key] = { closed: !existing ? true : existing === "Closed", open: "11:00", close: "21:00" };
+        initial[d.key] = { closed: !existing ? true : existing === "Closed", open: "09:00", close: "17:30" };
       } else {
-        // Parse back best-effort; default to typical hours
-        initial[d.key] = { closed: false, open: "11:00", close: "21:00" };
+        initial[d.key] = { closed: false, open: "09:00", close: "17:30" };
       }
     });
     return initial;
   });
+  const [enabled, setEnabled] = useState<boolean>(() => {
+    // If every day is closed, consider disabled
+    const anyOpen = Object.values(local).some((d) => !d.closed);
+    return anyOpen;
+  });
+
+  // Styled toggle button
+  const Switch = ({ checked, onToggle, disabled = false }: { checked: boolean; onToggle: () => void; disabled?: boolean }) => (
+    <button
+      type="button"
+      aria-pressed={checked}
+      onClick={onToggle}
+      disabled={disabled}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${disabled ? "opacity-50" : ""} ${checked ? "bg-[#FB7A20]" : "bg-gray-300"}`}
+    >
+      <span
+        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${checked ? "translate-x-5" : "translate-x-1"}`}
+      />
+    </button>
+  );
 
   useEffect(() => {
     // Sync outward as a map of strings per day
     const out: Record<string, string> = {};
     for (const day of DAYS) {
       const d = local[day.key];
-      out[day.key] = d.closed ? "Closed" : formatTimeRange(d.open, d.close);
+      out[day.key] = (!enabled || d.closed) ? "Closed" : formatTimeRange(d.open, d.close);
     }
     onChange(out);
-  }, [local, onChange]);
+  }, [local, enabled, onChange]);
 
   const applyToRange = (fromKey: string, rangeKeys: string[]) => {
     const src = local[fromKey];
@@ -63,74 +82,100 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
     setLocal(next);
   };
 
+  const setGlobalEnabled = (nextVal: boolean) => {
+    setEnabled(nextVal);
+    if (!nextVal) {
+      // Keep open/close values, but treat as closed when exporting
+      return;
+    }
+  };
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2 mb-1">
-        <span className="text-sm text-gray-600">Quick apply:</span>
-        <button
-          type="button"
-          className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
-          onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu"]) }
-        >
-          Mon → Mon-Thu
-        </button>
-        <button
-          type="button"
-          className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
-          onClick={() => applyToRange("Fri", ["Fri", "Sat"]) }
-        >
-          Fri → Fri-Sat
-        </button>
-        <button
-          type="button"
-          className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
-          onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]) }
-        >
-          Mon → Weekdays+Sat
-        </button>
-        <button
-          type="button"
-          className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50"
-          onClick={() => applyToRange("Sun", ["Sun"]) }
-        >
-          Sun only
-        </button>
+    <div className="rounded-2xl border bg-white shadow-sm">
+      <div className="flex items-center justify-between p-4">
+        <div>
+          <div className="text-base font-semibold">Business hours</div>
+          <div className="text-xs text-gray-500">Control how your location works at different times of day</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Enable</span>
+          <Switch checked={enabled} onToggle={() => setGlobalEnabled(!enabled)} />
+        </div>
       </div>
-      <div className="divide-y rounded-lg border bg-white">
-        {DAYS.map((d) => (
-          <div key={d.key} className="grid grid-cols-12 items-center gap-3 p-3">
-            <div className="col-span-3 sm:col-span-2 font-medium text-sm">{d.label}</div>
-            <label className="col-span-3 sm:col-span-2 inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={local[d.key]?.closed || false}
-                onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "11:00", close: "21:00" }), closed: e.target.checked } }))}
-              />
-              Closed
-            </label>
-            <div className="col-span-3 sm:col-span-3">
-              <input
-                type="time"
-                className="form-input w-full py-2"
-                disabled={local[d.key]?.closed}
-                value={local[d.key]?.open || "11:00"}
-                onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "21:00" }), open: e.target.value } }))}
-              />
-            </div>
-            <div className="col-span-3 sm:col-span-3">
-              <input
-                type="time"
-                className="form-input w-full py-2"
-                disabled={local[d.key]?.closed}
-                value={local[d.key]?.close || "21:00"}
-                onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "11:00" }), close: e.target.value } }))}
-              />
-            </div>
+
+      <div className="px-4 pb-3">
+        <div className="mb-3 flex flex-wrap gap-2 text-xs">
+          <span className="text-gray-600">Quick apply:</span>
+          <button
+            type="button"
+            className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50"
+            onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu"]) }
+          >
+            Mon → Mon–Thu
+          </button>
+          <button
+            type="button"
+            className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50"
+            onClick={() => applyToRange("Fri", ["Fri", "Sat"]) }
+          >
+            Fri → Fri–Sat
+          </button>
+          <button
+            type="button"
+            className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50"
+            onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu", "Fri"]) }
+          >
+            Mon → Weekdays
+          </button>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border">
+          <div className="grid grid-cols-12 bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600">
+            <div className="col-span-4 sm:col-span-3">Day</div>
+            <div className="col-span-4 sm:col-span-4">From</div>
+            <div className="col-span-4 sm:col-span-4">To</div>
           </div>
-        ))}
+          <div className="divide-y">
+            {DAYS.map((d) => {
+              const isClosed = !enabled || local[d.key]?.closed;
+              return (
+                <div key={d.key} className="grid grid-cols-12 items-center gap-3 px-4 py-3">
+                  <div className="col-span-4 sm:col-span-3 flex items-center gap-3">
+                    <Switch
+                      checked={!local[d.key]?.closed && enabled}
+                      onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
+                      disabled={!enabled}
+                    />
+                    <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
+                  </div>
+                  <div className="col-span-4 sm:col-span-4">
+                    <div className="relative">
+                      <input
+                        type="time"
+                        className={`form-input w-full py-2 ${isClosed ? "opacity-50" : ""}`}
+                        disabled={isClosed}
+                        value={local[d.key]?.open || "09:00"}
+                        onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-4 sm:col-span-4">
+                    <div className="relative">
+                      <input
+                        type="time"
+                        className={`form-input w-full py-2 ${isClosed ? "opacity-50" : ""}`}
+                        disabled={isClosed}
+                        value={local[d.key]?.close || "17:30"}
+                        onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
-      <div className="text-xs text-gray-500">Hours will be saved per-day, e.g. <code>{"{\"Mon\":\"11:00 AM – 9:00 PM\"}"}</code>. Closed days are saved as "Closed".</div>
     </div>
   );
 }
@@ -422,8 +467,8 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
         >
           <div className="flex items-center justify-between">
             <label className="block text-lg font-semibold" htmlFor={current.key}>
-              {current.label}
-            </label>
+            {current.label}
+          </label>
             <div className="text-sm text-gray-400">Step {step + 1} of {steps.length}</div>
           </div>
 
@@ -472,19 +517,19 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           )}
 
           {current.type !== "hours" && current.type !== "address" && current.type !== "cuisines" && (
-            <input
-              id={current.key}
-              name={current.key}
-              type={current.type}
-              min={current.min}
-              max={current.max}
-              step={current.step}
-              placeholder={current.placeholder}
-              value={values[current.key] || ""}
-              onChange={handleChange}
+          <input
+            id={current.key}
+            name={current.key}
+            type={current.type}
+            min={current.min}
+            max={current.max}
+            step={current.step}
+            placeholder={current.placeholder}
+            value={values[current.key] || ""}
+            onChange={handleChange}
               className="form-input w-full py-2"
-              autoFocus
-            />
+            autoFocus
+          />
           )}
 
           {error && <div className="text-red-600 text-sm">{error}</div>}
@@ -498,12 +543,12 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
             >
               Back
             </button>
-            <button
-              type="submit"
+          <button
+            type="submit"
               className="btn bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]"
-            >
+          >
               {step < steps.length - 1 ? "Next" : "Finish"}
-            </button>
+          </button>
           </div>
         </motion.form>
       </AnimatePresence>
