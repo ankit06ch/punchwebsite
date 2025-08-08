@@ -135,6 +135,81 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
   );
 }
 
+// ---------------- Cuisine Tags ----------------
+const CUISINE_SUGGESTIONS = [
+  "American", "Bar", "BBQ", "Bakery", "Breakfast", "Brunch", "Burgers", "Cafe", "Caribbean",
+  "Chinese", "Dessert", "Ethiopian", "French", "Greek", "Halal", "Indian", "Italian", "Japanese",
+  "Korean", "Mediterranean", "Mexican", "Middle Eastern", "Pizza", "Pub", "Ramen", "Seafood",
+  "Spanish", "Steakhouse", "Sushi", "Tacos", "Tapas", "Thai", "Vegan", "Vegetarian", "Vietnamese",
+];
+
+function CuisineTags({ value, onChange }: { value: string[] | undefined; onChange: (v: string[]) => void }) {
+  const selected = value ?? [];
+  const [addingOther, setAddingOther] = useState(false);
+  const [otherText, setOtherText] = useState("");
+
+  const toggleTag = (tag: string) => {
+    const exists = selected.includes(tag);
+    const next = exists ? selected.filter((t) => t !== tag) : [...selected, tag];
+    onChange(next);
+  };
+
+  const addOther = () => {
+    const clean = otherText.trim();
+    if (!clean) return;
+    if (!selected.includes(clean)) onChange([...selected, clean]);
+    setOtherText("");
+    setAddingOther(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {CUISINE_SUGGESTIONS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => toggleTag(c)}
+            className={`px-3 py-1 rounded-full text-sm border transition ${selected.includes(c) ? "bg-[#FB7A20] text-white border-[#FB7A20]" : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"}`}
+          >
+            {c}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setAddingOther(true)}
+          className="px-3 py-1 rounded-full text-sm border bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
+        >
+          Other
+        </button>
+      </div>
+      {addingOther && (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            className="form-input py-2"
+            placeholder="Enter cuisine"
+            value={otherText}
+            onChange={(e) => setOtherText(e.target.value)}
+          />
+          <button type="button" onClick={addOther} className="btn bg-[#FB7A20] text-white hover:bg-[#e66a1a]">Add</button>
+          <button type="button" onClick={() => { setAddingOther(false); setOtherText(""); }} className="px-3 py-2 rounded border border-gray-300 text-gray-700">Cancel</button>
+        </div>
+      )}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selected.map((c) => (
+            <span key={c} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+              {c}
+              <button type="button" className="text-gray-500 hover:text-gray-700" onClick={() => toggleTag(c)}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------------- Map (dark) - Mapbox GL ----------------
 function MapboxMap({ lat, lon }: { lat: number; lon: number }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -194,7 +269,7 @@ function MapPreview({ lat, lon }: { lat: number; lon: number }) {
 // ---------------- Steps ----------------
 const steps = [
   { key: "name", label: "Restaurant Name", placeholder: "Sushi Town", type: "text" },
-  { key: "cuisine", label: "Cuisine", placeholder: "Sushi", type: "text" },
+  { key: "cuisine", label: "Cuisine", placeholder: "Sushi", type: "cuisines" },
   { key: "price", label: "Price", placeholder: "$$$", type: "text" },
   { key: "location", label: "Address", placeholder: "123 Main St, San Francisco, CA", type: "address" },
   { key: "hours", label: "Hours", type: "hours" },
@@ -204,7 +279,7 @@ const steps = [
 
 export default function OnboardRestaurant({ onComplete }: { onComplete: (values: any) => void }) {
   const [step, setStep] = useState(-1); // -1 means intro card
-  const [values, setValues] = useState<any>({});
+  const [values, setValues] = useState<any>({ cuisines: [] as string[] });
   const [error, setError] = useState("");
   const [loading] = useState(false);
 
@@ -260,6 +335,16 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
         setError("Please select a suggested address to validate.");
         return;
       }
+    } else if (current.type === "cuisines") {
+      if (!Array.isArray(values.cuisines) || values.cuisines.length === 0) {
+        setError("Please select at least one cuisine.");
+        return;
+      }
+    } else if (current.key === "price") {
+      if (typeof value !== "string" || !/^\$+$/.test(value)) {
+        setError("Price must contain only dollar signs, e.g. $, $$, $$$.");
+        return;
+      }
     } else if (!value || (current.type === "number" && isNaN(Number(value)))) {
       setError("Please enter a valid value.");
       return;
@@ -283,6 +368,10 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
 
   const handleHoursChange = (hours: Record<string, string>) => {
     setValues({ ...values, hours });
+  };
+
+  const handleCuisinesChange = (cuisines: string[]) => {
+    setValues({ ...values, cuisines });
   };
 
   if (step === -1) {
@@ -321,13 +410,17 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
         >
           <div className="flex items-center justify-between">
             <label className="block text-lg font-semibold" htmlFor={current.key}>
-              {current.label}
-            </label>
+            {current.label}
+          </label>
             <div className="text-sm text-gray-400">Step {step + 1} of {steps.length}</div>
           </div>
 
           {current.type === "hours" && (
             <HoursEditor value={values[current.key]} onChange={handleHoursChange} />
+          )}
+
+          {current.type === "cuisines" && (
+            <CuisineTags value={values.cuisines} onChange={handleCuisinesChange} />
           )}
 
           {current.type === "address" && (
@@ -362,25 +455,24 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
               </div>
               <div>
                 <MapPreview lat={defaultCenter.lat} lon={defaultCenter.lon} />
-                <div className="mt-1 text-xs text-gray-500">Dark map preview. Select an address to update the pin.</div>
               </div>
             </div>
           )}
 
-          {current.type !== "hours" && current.type !== "address" && (
-            <input
-              id={current.key}
-              name={current.key}
-              type={current.type}
-              min={current.min}
-              max={current.max}
-              step={current.step}
-              placeholder={current.placeholder}
-              value={values[current.key] || ""}
-              onChange={handleChange}
+          {current.type !== "hours" && current.type !== "address" && current.type !== "cuisines" && (
+          <input
+            id={current.key}
+            name={current.key}
+            type={current.type}
+            min={current.min}
+            max={current.max}
+            step={current.step}
+            placeholder={current.placeholder}
+            value={values[current.key] || ""}
+            onChange={handleChange}
               className="form-input w-full py-2"
-              autoFocus
-            />
+            autoFocus
+          />
           )}
 
           {error && <div className="text-red-600 text-sm">{error}</div>}
@@ -394,12 +486,12 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
             >
               Back
             </button>
-            <button
-              type="submit"
+          <button
+            type="submit"
               className="btn bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]"
-            >
+          >
               {step < steps.length - 1 ? "Next" : "Finish"}
-            </button>
+          </button>
           </div>
         </motion.form>
       </AnimatePresence>
