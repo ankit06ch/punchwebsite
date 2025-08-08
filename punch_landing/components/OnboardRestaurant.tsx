@@ -15,6 +15,14 @@ const DAYS: Array<{ key: string; label: string }> = [
   { key: "Sun", label: "Sunday" },
 ];
 
+const TZ_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "America/Los_Angeles", label: "(UTC-08:00) Pacific Time" },
+  { value: "America/Denver", label: "(UTC-07:00) Mountain Time" },
+  { value: "America/Chicago", label: "(UTC-06:00) Central Time" },
+  { value: "America/New_York", label: "(UTC-05:00) Eastern Time" },
+  { value: "UTC", label: "(UTC+00:00) UTC" },
+];
+
 function formatTimeRange(open: string, close: string): string {
   if (!open || !close) return "";
   const to12h = (t: string) => {
@@ -28,7 +36,17 @@ function formatTimeRange(open: string, close: string): string {
   return `${to12h(open)} – ${to12h(close)}`;
 }
 
-function HoursEditor({ value, onChange }: { value: Record<string, string> | undefined; onChange: (v: Record<string, string>) => void }) {
+function HoursEditor({
+  value,
+  timezone,
+  onTimezoneChange,
+  onChange,
+}: {
+  value: Record<string, string> | undefined;
+  timezone: string | undefined;
+  onTimezoneChange: (tz: string) => void;
+  onChange: (v: Record<string, string>) => void;
+}) {
   const [local, setLocal] = useState<Record<string, { closed: boolean; open: string; close: string }>>(() => {
     const initial: Record<string, { closed: boolean; open: string; close: string }> = {};
     DAYS.forEach((d) => {
@@ -77,16 +95,28 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
   };
 
   return (
-    <div className="rounded-2xl border bg-white shadow-sm">
-      <div className="flex items-center justify-between p-4">
+    <div className="rounded-2xl border bg-white shadow-sm w-full">
+      <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-base font-semibold">Business hours</div>
           <div className="text-xs text-gray-500">Control how your location works at different times of day</div>
         </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Timezone</span>
+          <select
+            className="form-select rounded-md border-gray-300 py-2 text-sm focus:border-[#FB7A20] focus:ring-[#FB7A20]"
+            value={timezone || "America/Los_Angeles"}
+            onChange={(e) => onTimezoneChange(e.target.value)}
+          >
+            {TZ_OPTIONS.map((tz) => (
+              <option key={tz.value} value={tz.value}>{tz.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="px-4 pb-3">
-        <div className="mb-3 flex flex-wrap gap-2 text-xs">
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
           <span className="text-gray-600">Quick apply:</span>
           <button
             type="button"
@@ -133,7 +163,7 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
                     <div className="relative">
                       <input
                         type="time"
-                        className={`form-input w-full py-2 ${isClosed ? "opacity-50" : ""}`}
+                        className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
                         disabled={isClosed}
                         value={local[d.key]?.open || "09:00"}
                         onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
@@ -144,7 +174,7 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
                     <div className="relative">
                       <input
                         type="time"
-                        className={`form-input w-full py-2 ${isClosed ? "opacity-50" : ""}`}
+                        className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
                         disabled={isClosed}
                         value={local[d.key]?.close || "17:30"}
                         onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
@@ -317,7 +347,7 @@ const steps = [
 
 export default function OnboardRestaurant({ onComplete }: { onComplete: (values: any) => void }) {
   const [step, setStep] = useState(-1); // -1 means intro card
-  const [values, setValues] = useState<any>({ cuisines: [] as string[] });
+  const [values, setValues] = useState<any>({ cuisines: [] as string[], timezone: "America/Los_Angeles" });
   const [error, setError] = useState("");
   const [loading] = useState(false);
 
@@ -408,6 +438,10 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     setValues((prev: any) => ({ ...prev, hours }));
   }, []);
 
+  const handleTimezoneChange = useCallback((tz: string) => {
+    setValues((prev: any) => ({ ...prev, timezone: tz }));
+  }, []);
+
   const handleCuisinesChange = (cuisines: string[]) => {
     setValues({ ...values, cuisines });
   };
@@ -454,7 +488,12 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           </div>
 
           {current.type === "hours" && (
-            <HoursEditor value={values[current.key]} onChange={handleHoursChange} />
+            <HoursEditor
+              value={values[current.key]}
+              timezone={values.timezone}
+              onTimezoneChange={handleTimezoneChange}
+              onChange={handleHoursChange}
+            />
           )}
 
           {current.type === "cuisines" && (
