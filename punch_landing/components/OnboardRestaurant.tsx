@@ -95,12 +95,9 @@ function HoursEditor({
   };
 
   return (
-    <div className="rounded-2xl border bg-white shadow-sm w-full">
-      <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-base font-semibold">Business hours</div>
-          <div className="text-xs text-gray-500">Control how your location works at different times of day</div>
-        </div>
+    <div className="w-full">
+      {/* Top controls row: Timezone + Quick apply */}
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Timezone</span>
           <select
@@ -113,10 +110,7 @@ function HoursEditor({
             ))}
           </select>
         </div>
-      </div>
-
-      <div className="px-4 pb-3">
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="text-gray-600">Quick apply:</span>
           <button
             type="button"
@@ -140,52 +134,42 @@ function HoursEditor({
             Mon → Weekdays
           </button>
         </div>
+      </div>
 
-        <div className="overflow-hidden rounded-xl border">
-          <div className="grid grid-cols-12 bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600">
-            <div className="col-span-4 sm:col-span-3">Day</div>
-            <div className="col-span-4 sm:col-span-4">From</div>
-            <div className="col-span-4 sm:col-span-4">To</div>
-          </div>
-          <div className="divide-y">
-            {DAYS.map((d) => {
-              const isClosed = local[d.key]?.closed;
-              return (
-                <div key={d.key} className="grid grid-cols-12 items-center gap-3 px-4 py-3">
-                  <div className="col-span-4 sm:col-span-3 flex items-center gap-3">
-                    <Switch
-                      checked={!local[d.key]?.closed}
-                      onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
-                    />
-                    <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
-                  </div>
-                  <div className="col-span-4 sm:col-span-4">
-                    <div className="relative">
-                      <input
-                        type="time"
-                        className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
-                        disabled={isClosed}
-                        value={local[d.key]?.open || "09:00"}
-                        onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-span-4 sm:col-span-4">
-                    <div className="relative">
-                      <input
-                        type="time"
-                        className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
-                        disabled={isClosed}
-                        value={local[d.key]?.close || "17:30"}
-                        onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {/* Simple list like the original: day + closed switch + From/To time inputs */}
+      <div className="divide-y rounded-lg border bg-white">
+        {DAYS.map((d) => {
+          const isClosed = local[d.key]?.closed;
+          return (
+            <div key={d.key} className="grid grid-cols-12 items-center gap-3 p-3">
+              <div className="col-span-12 sm:col-span-3 flex items-center gap-3">
+                <Switch
+                  checked={!local[d.key]?.closed}
+                  onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
+                />
+                <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
+              </div>
+              <div className="col-span-6 sm:col-span-4">
+                <input
+                  type="time"
+                  className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                  disabled={isClosed}
+                  value={local[d.key]?.open || "09:00"}
+                  onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
+                />
+              </div>
+              <div className="col-span-6 sm:col-span-4">
+                <input
+                  type="time"
+                  className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                  disabled={isClosed}
+                  value={local[d.key]?.close || "17:30"}
+                  onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
