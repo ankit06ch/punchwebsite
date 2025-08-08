@@ -355,7 +355,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
 
   if (step === -1) {
     return (
-      <div className="max-w-md mx-auto mt-24 p-10 rounded-3xl shadow-2xl flex flex-col items-center bg-white/30 backdrop-blur-md border border-white/40 relative overflow-hidden">
+      <div className="max-w-lg mx-auto mt-24 p-10 rounded-3xl shadow-2xl flex flex-col items-center bg-white/30 backdrop-blur-md border border-white/40 relative overflow-hidden">
         {/* Orange Glow */}
         <div className="absolute -z-10 left-1/2 top-0 -translate-x-1/2 blur-2xl opacity-40" style={{ width: 320, height: 120, background: 'radial-gradient(circle, #FB7A20 0%, transparent 80%)' }} />
         {/* Fun Icon */}
@@ -376,7 +376,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   const defaultCenter = { lat: values.coordinates?.lat ?? 37.7749, lon: values.coordinates?.lon ?? -122.4194 };
 
   return (
-    <div className="max-w-screen-xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
+    <div className="max-w-screen-2xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
       <AnimatePresence mode="wait">
         <motion.form
           key={current.key}
