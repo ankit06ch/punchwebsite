@@ -47,9 +47,9 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
       type="button"
       aria-pressed={checked}
       onClick={onToggle}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${checked ? "bg-[#FB7A20]" : "bg-gray-300"}`}
+      className={`relative inline-flex h-7 w-12 cursor-pointer items-center rounded-full transition ${checked ? "bg-[#FB7A20]" : "bg-gray-300"}`}
     >
-      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${checked ? "translate-x-5" : "translate-x-1"}`} />
+      <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${checked ? "translate-x-6" : "translate-x-1"}`} />
     </button>
   );
 
@@ -72,7 +72,13 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
               <div className="col-span-12 sm:col-span-3 flex items-center gap-3">
                 <Switch
                   checked={!local[d.key]?.closed}
-                  onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
+                  onToggle={() => setLocal((prev) => ({
+                    ...prev,
+                    [d.key]: {
+                      ...(prev[d.key] || { open: "09:00", close: "17:30" }),
+                      closed: !(prev[d.key]?.closed ?? true) ? true : false,
+                    },
+                  }))}
                 />
                 <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
               </div>
