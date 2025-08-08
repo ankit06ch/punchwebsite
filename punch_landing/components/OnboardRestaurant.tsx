@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import mapboxgl from "mapbox-gl";
@@ -404,9 +404,9 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     setValues({ ...values, [current.key]: e.target.value });
   };
 
-  const handleHoursChange = (hours: Record<string, string>) => {
-    setValues({ ...values, hours });
-  };
+  const handleHoursChange = useCallback((hours: Record<string, string>) => {
+    setValues((prev: any) => ({ ...prev, hours }));
+  }, []);
 
   const handleCuisinesChange = (cuisines: string[]) => {
     setValues({ ...values, cuisines });
