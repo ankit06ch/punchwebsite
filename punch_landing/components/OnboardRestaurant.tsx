@@ -435,7 +435,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   const defaultCenter = { lat: values.coordinates?.lat ?? 37.7749, lon: values.coordinates?.lon ?? -122.4194 };
 
   return (
-    <div className="max-w-6xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
+    <div className="max-w-screen-xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
       <AnimatePresence mode="wait">
         <motion.form
           key={current.key}
