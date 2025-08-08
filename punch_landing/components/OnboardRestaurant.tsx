@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 
@@ -135,11 +135,11 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
 }
 
 // ---------------- Map (dark) ----------------
-const MapInner = ({ center }: { center: { lat: number; lng: number } }) => {
+const MapInner = ({ center, mapKey }: { center: { lat: number; lng: number }, mapKey: string }) => {
   // Require locally to avoid SSR issues
   const { MapContainer, TileLayer, Marker } = require("react-leaflet");
   return (
-    <MapContainer center={center} zoom={15} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
+    <MapContainer key={mapKey} center={center} zoom={15} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -152,10 +152,14 @@ const MapInner = ({ center }: { center: { lat: number; lng: number } }) => {
 const MapClient = dynamic(async () => MapInner, { ssr: false });
 
 function MapPreview({ lat, lon }: { lat: number; lon: number }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const center = useMemo(() => ({ lat, lng: lon }), [lat, lon]);
+  const mapKey = useMemo(() => `map-${lat}-${lon}`, [lat, lon]);
+  if (!mounted) return <div className="h-56 w-full overflow-hidden rounded-lg border" />;
   return (
     <div className="h-56 w-full overflow-hidden rounded-lg border">
-      <MapClient center={center} />
+      <MapClient center={center} mapKey={mapKey} />
     </div>
   );
 }
@@ -179,36 +183,39 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
 
   const current = steps[step];
 
-  // Address validation + geocode
-  const [geoLoading, setGeoLoading] = useState(false);
-  const [geoError, setGeoError] = useState("");
+  // Address autocomplete
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
+  const [isOpenSuggest, setIsOpenSuggest] = useState(false);
+  const debounceRef = useRef<any>(null);
 
-  const geocodeAddress = async (query: string) => {
-    if (!query || query.trim().length < 5) {
-      setGeoError("Please enter a full address.");
+  useEffect(() => {
+    if (current?.type !== "address") return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!query || query.trim().length < 3) {
+      setSuggestions([]);
       return;
     }
-    setGeoLoading(true);
-    setGeoError("");
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-      const res = await fetch(url, { headers: { "Accept": "application/json" } });
-      const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) {
-        setGeoError("Address not found. Please refine it.");
-        setValues((prev: any) => ({ ...prev, coordinates: undefined }));
-        return;
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}&limit=5`;
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        const data = await res.json();
+        setSuggestions(Array.isArray(data) ? data : []);
+        setIsOpenSuggest(true);
+      } catch {
+        setSuggestions([]);
       }
-      const hit = data[0];
-      const lat = parseFloat(hit.lat);
-      const lon = parseFloat(hit.lon);
-      const displayName = hit.display_name as string;
-      setValues((prev: any) => ({ ...prev, location: displayName, coordinates: { lat, lon } }));
-    } catch (e) {
-      setGeoError("Failed to validate address. Try again.");
-    } finally {
-      setGeoLoading(false);
-    }
+    }, 300);
+    return () => debounceRef.current && clearTimeout(debounceRef.current);
+  }, [query, current?.type]);
+
+  const chooseSuggestion = (s: { display_name: string; lat: string; lon: string }) => {
+    const lat = parseFloat(s.lat);
+    const lon = parseFloat(s.lon);
+    setValues((prev: any) => ({ ...prev, location: s.display_name, coordinates: { lat, lon } }));
+    setQuery(s.display_name);
+    setIsOpenSuggest(false);
   };
 
   const handleNext = async (e: React.FormEvent) => {
@@ -223,7 +230,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
       }
     } else if (current.type === "address") {
       if (!values.coordinates) {
-        setError("Please validate your address before continuing.");
+        setError("Please select a suggested address to validate.");
         return;
       }
     } else if (!value || (current.type === "number" && isNaN(Number(value)))) {
@@ -270,6 +277,9 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     );
   }
 
+  // Default map center if not yet selected
+  const defaultCenter = { lat: values.coordinates?.lat ?? 37.7749, lon: values.coordinates?.lon ?? -122.4194 };
+
   return (
     <div className="max-w-2xl mx-auto mt-16 p-8 bg-white rounded-2xl shadow-xl">
       <AnimatePresence mode="wait">
@@ -295,33 +305,38 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
 
           {current.type === "address" && (
             <div className="space-y-3">
-              <input
-                id={current.key}
-                name={current.key}
-                type="text"
-                placeholder={current.placeholder}
-                value={values[current.key] || ""}
-                onChange={(e) => setValues((prev: any) => ({ ...prev, [current.key]: e.target.value }))}
-                className="form-input w-full py-2"
-                autoFocus
-              />
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={() => geocodeAddress(values[current.key] || "")} className="btn bg-[#FB7A20] text-white hover:bg-[#e66a1a] px-4 py-2">
-                  {geoLoading ? "Validating..." : "Validate & Locate"}
-                </button>
-                {values.coordinates && !geoLoading && !geoError && (
-                  <span className="text-sm text-green-700">Address validated</span>
+              <div className="relative">
+                <input
+                  id={current.key}
+                  name={current.key}
+                  type="text"
+                  placeholder={current.placeholder}
+                  value={query || values[current.key] || ""}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="form-input w-full py-2"
+                  autoFocus
+                  onFocus={() => suggestions.length && setIsOpenSuggest(true)}
+                  onBlur={() => setTimeout(() => setIsOpenSuggest(false), 150)}
+                />
+                {isOpenSuggest && suggestions.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                    {suggestions.map((s) => (
+                      <button
+                        type="button"
+                        key={`${s.lat}-${s.lon}`}
+                        onClick={() => chooseSuggestion(s)}
+                        className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                      >
+                        {s.display_name}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
-              {geoError && <div className="text-red-600 text-sm">{geoError}</div>}
-              {values.coordinates && (
-                <div>
-                  <div className="h-56 w-full overflow-hidden rounded-lg border">
-                    <MapClient center={{ lat: values.coordinates.lat, lng: values.coordinates.lon }} />
-                  </div>
-                  <div className="mt-1 text-xs text-gray-500">Dark map preview. Pin shows the validated location.</div>
-                </div>
-              )}
+              <div>
+                <MapPreview lat={defaultCenter.lat} lon={defaultCenter.lon} />
+                <div className="mt-1 text-xs text-gray-500">Dark map preview. Select an address to update the pin.</div>
+              </div>
             </div>
           )}
 
