@@ -15,14 +15,6 @@ const DAYS: Array<{ key: string; label: string }> = [
   { key: "Sun", label: "Sunday" },
 ];
 
-const TZ_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "America/Los_Angeles", label: "(UTC-08:00) Pacific Time" },
-  { value: "America/Denver", label: "(UTC-07:00) Mountain Time" },
-  { value: "America/Chicago", label: "(UTC-06:00) Central Time" },
-  { value: "America/New_York", label: "(UTC-05:00) Eastern Time" },
-  { value: "UTC", label: "(UTC+00:00) UTC" },
-];
-
 function formatTimeRange(open: string, close: string): string {
   if (!open || !close) return "";
   const to12h = (t: string) => {
@@ -36,17 +28,7 @@ function formatTimeRange(open: string, close: string): string {
   return `${to12h(open)} – ${to12h(close)}`;
 }
 
-function HoursEditor({
-  value,
-  timezone,
-  onTimezoneChange,
-  onChange,
-}: {
-  value: Record<string, string> | undefined;
-  timezone: string | undefined;
-  onTimezoneChange: (tz: string) => void;
-  onChange: (v: Record<string, string>) => void;
-}) {
+function HoursEditor({ value, onChange }: { value: Record<string, string> | undefined; onChange: (v: Record<string, string>) => void }) {
   const [local, setLocal] = useState<Record<string, { closed: boolean; open: string; close: string }>>(() => {
     const initial: Record<string, { closed: boolean; open: string; close: string }> = {};
     DAYS.forEach((d) => {
@@ -60,18 +42,14 @@ function HoursEditor({
     return initial;
   });
 
-  // Styled toggle button
-  const Switch = ({ checked, onToggle, disabled = false }: { checked: boolean; onToggle: () => void; disabled?: boolean }) => (
+  const Switch = ({ checked, onToggle }: { checked: boolean; onToggle: () => void }) => (
     <button
       type="button"
       aria-pressed={checked}
       onClick={onToggle}
-      disabled={disabled}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${disabled ? "opacity-50" : ""} ${checked ? "bg-[#FB7A20]" : "bg-gray-300"}`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${checked ? "bg-[#FB7A20]" : "bg-gray-300"}`}
     >
-      <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${checked ? "translate-x-5" : "translate-x-1"}`}
-      />
+      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${checked ? "translate-x-5" : "translate-x-1"}`} />
     </button>
   );
 
@@ -84,76 +62,41 @@ function HoursEditor({
     onChange(out);
   }, [local, onChange]);
 
-  const applyToRange = (fromKey: string, rangeKeys: string[]) => {
-    const src = local[fromKey];
-    if (!src) return;
-    const next = { ...local };
-    for (const k of rangeKeys) {
-      next[k] = { ...src };
-    }
-    setLocal(next);
-  };
-
   return (
-    <div className="w-full rounded-lg border bg-white shadow-sm">
-      {/* Header controls inside the card */}
-      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Timezone</span>
-          <select
-            className="form-select rounded-md border-gray-300 py-2 text-sm focus:border-[#FB7A20] focus:ring-[#FB7A20]"
-            value={timezone || "America/Los_Angeles"}
-            onChange={(e) => onTimezoneChange(e.target.value)}
-          >
-            {TZ_OPTIONS.map((tz) => (
-              <option key={tz.value} value={tz.value}>{tz.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-gray-600">Quick apply:</span>
-          <button type="button" className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100" onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu"]) }>Mon → Mon–Thu</button>
-          <button type="button" className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100" onClick={() => applyToRange("Fri", ["Fri", "Sat"]) }>Fri → Fri–Sat</button>
-          <button type="button" className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100" onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu", "Fri"]) }>Mon → Weekdays</button>
-        </div>
-      </div>
-
-      {/* Simple responsive list that fits the card */}
-      <div className="px-4 pb-4">
-        <div className="divide-y rounded-md border">
-          {DAYS.map((d) => {
-            const isClosed = local[d.key]?.closed;
-            return (
-              <div key={d.key} className="grid grid-cols-12 items-center gap-3 p-3">
-                <div className="col-span-12 sm:col-span-3 flex items-center gap-3">
-                  <Switch
-                    checked={!local[d.key]?.closed}
-                    onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
-                  />
-                  <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
-                </div>
-                <div className="col-span-6 sm:col-span-4">
-                  <input
-                    type="time"
-                    className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
-                    disabled={isClosed}
-                    value={local[d.key]?.open || "09:00"}
-                    onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
-                  />
-                </div>
-                <div className="col-span-6 sm:col-span-4">
-                  <input
-                    type="time"
-                    className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
-                    disabled={isClosed}
-                    value={local[d.key]?.close || "17:30"}
-                    onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
-                  />
-                </div>
+    <div className="w-full">
+      <div className="divide-y rounded-lg border bg-white">
+        {DAYS.map((d) => {
+          const isClosed = local[d.key]?.closed;
+          return (
+            <div key={d.key} className="grid grid-cols-12 items-center gap-3 p-3">
+              <div className="col-span-12 sm:col-span-3 flex items-center gap-3">
+                <Switch
+                  checked={!local[d.key]?.closed}
+                  onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
+                />
+                <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
               </div>
-            );
-          })}
-        </div>
+              <div className="col-span-6 sm:col-span-4">
+                <input
+                  type="time"
+                  className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                  disabled={isClosed}
+                  value={local[d.key]?.open || "09:00"}
+                  onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
+                />
+              </div>
+              <div className="col-span-6 sm:col-span-4">
+                <input
+                  type="time"
+                  className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                  disabled={isClosed}
+                  value={local[d.key]?.close || "17:30"}
+                  onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -315,7 +258,7 @@ const steps = [
 
 export default function OnboardRestaurant({ onComplete }: { onComplete: (values: any) => void }) {
   const [step, setStep] = useState(-1); // -1 means intro card
-  const [values, setValues] = useState<any>({ cuisines: [] as string[], timezone: "America/Los_Angeles" });
+  const [values, setValues] = useState<any>({ cuisines: [] as string[] });
   const [error, setError] = useState("");
   const [loading] = useState(false);
 
@@ -406,10 +349,6 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     setValues((prev: any) => ({ ...prev, hours }));
   }, []);
 
-  const handleTimezoneChange = useCallback((tz: string) => {
-    setValues((prev: any) => ({ ...prev, timezone: tz }));
-  }, []);
-
   const handleCuisinesChange = (cuisines: string[]) => {
     setValues({ ...values, cuisines });
   };
@@ -456,12 +395,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           </div>
 
           {current.type === "hours" && (
-            <HoursEditor
-              value={values[current.key]}
-              timezone={values.timezone}
-              onTimezoneChange={handleTimezoneChange}
-              onChange={handleHoursChange}
-            />
+            <HoursEditor value={values[current.key]} onChange={handleHoursChange} />
           )}
 
           {current.type === "cuisines" && (
