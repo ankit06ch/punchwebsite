@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import L from "leaflet";
+import mapboxgl from "mapbox-gl";
 
 // ---------------- Hours Editor ----------------
 const DAYS: Array<{ key: string; label: string }> = [
@@ -135,35 +135,39 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
   );
 }
 
-// ---------------- Map (dark) - raw Leaflet ----------------
-function RawLeafletMap({ lat, lon }: { lat: number; lon: number }) {
+// ---------------- Map (dark) - Mapbox GL ----------------
+function MapboxMap({ lat, lon }: { lat: number; lon: number }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markerRef = useRef<mapboxgl.Marker | null>(null);
 
   useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (!token) return;
+    mapboxgl.accessToken = token;
     if (!mapContainerRef.current) return;
     if (!mapRef.current) {
-      // Initialize map once
-      const map = L.map(mapContainerRef.current, { zoomControl: false, scrollWheelZoom: false });
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      }).addTo(map);
+      const map = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: "mapbox://styles/mapbox/dark-v11",
+        center: [lon, lat],
+        zoom: 14,
+        attributionControl: false,
+      });
       mapRef.current = map;
+    } else {
+      mapRef.current.setCenter([lon, lat]);
+      mapRef.current.setZoom(14);
     }
 
-    const map = mapRef.current!;
-    map.setView([lat, lon], 15);
-
     if (!markerRef.current) {
-      markerRef.current = L.marker([lat, lon]).addTo(map);
+      markerRef.current = new mapboxgl.Marker().setLngLat([lon, lat]).addTo(mapRef.current!);
     } else {
-      markerRef.current.setLatLng([lat, lon]);
+      markerRef.current.setLngLat([lon, lat]);
     }
 
     return () => {
-      // Do not destroy on every re-render; only when unmounting the component
+      // cleanup on unmount only below
     };
   }, [lat, lon]);
 
@@ -184,7 +188,7 @@ function MapPreview({ lat, lon }: { lat: number; lon: number }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return <div className="h-56 w-full overflow-hidden rounded-lg border" />;
-  return <RawLeafletMap lat={lat} lon={lon} />;
+  return <MapboxMap lat={lat} lon={lon} />;
 }
 
 // ---------------- Steps ----------------

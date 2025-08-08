@@ -1,5 +1,6 @@
 import "./css/style.css";
 import "leaflet/dist/leaflet.css";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 import { Inter } from "next/font/google";
 
