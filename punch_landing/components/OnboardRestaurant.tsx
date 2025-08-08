@@ -112,57 +112,39 @@ function HoursEditor({
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="text-gray-600">Quick apply:</span>
-          <button
-            type="button"
-            className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50"
-            onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu"]) }
-          >
-            Mon → Mon–Thu
-          </button>
-          <button
-            type="button"
-            className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50"
-            onClick={() => applyToRange("Fri", ["Fri", "Sat"]) }
-          >
-            Fri → Fri–Sat
-          </button>
-          <button
-            type="button"
-            className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-50"
-            onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu", "Fri"]) }
-          >
-            Mon → Weekdays
-          </button>
+          <button type="button" className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100" onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu"]) }>Mon → Mon–Thu</button>
+          <button type="button" className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100" onClick={() => applyToRange("Fri", ["Fri", "Sat"]) }>Fri → Fri–Sat</button>
+          <button type="button" className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100" onClick={() => applyToRange("Mon", ["Mon", "Tue", "Wed", "Thu", "Fri"]) }>Mon → Weekdays</button>
         </div>
       </div>
 
-      {/* List with horizontal scroll and min width to prevent cut-off */}
-      <div className="px-4 pb-4 overflow-x-auto">
-        <div className="min-w-[720px] divide-y rounded-md border">
+      {/* Simple responsive list that fits the card */}
+      <div className="px-4 pb-4">
+        <div className="divide-y rounded-md border">
           {DAYS.map((d) => {
             const isClosed = local[d.key]?.closed;
             return (
               <div key={d.key} className="grid grid-cols-12 items-center gap-3 p-3">
-                <div className="col-span-4 flex items-center gap-3">
+                <div className="col-span-12 sm:col-span-3 flex items-center gap-3">
                   <Switch
                     checked={!local[d.key]?.closed}
                     onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
                   />
                   <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
                 </div>
-                <div className="col-span-4">
+                <div className="col-span-6 sm:col-span-4">
                   <input
                     type="time"
-                    className={`form-input w-40 md:w-48 rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                    className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
                     disabled={isClosed}
                     value={local[d.key]?.open || "09:00"}
                     onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
                   />
                 </div>
-                <div className="col-span-4">
+                <div className="col-span-6 sm:col-span-4">
                   <input
                     type="time"
-                    className={`form-input w-40 md:w-48 rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                    className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
                     disabled={isClosed}
                     value={local[d.key]?.close || "17:30"}
                     onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
