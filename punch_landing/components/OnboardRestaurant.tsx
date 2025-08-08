@@ -95,9 +95,9 @@ function HoursEditor({
   };
 
   return (
-    <div className="w-full">
-      {/* Top controls row: Timezone + Quick apply */}
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="w-full rounded-lg border bg-white shadow-sm">
+      {/* Header controls inside the card */}
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Timezone</span>
           <select
@@ -136,40 +136,42 @@ function HoursEditor({
         </div>
       </div>
 
-      {/* Simple list like the original: day + closed switch + From/To time inputs */}
-      <div className="divide-y rounded-lg border bg-white">
-        {DAYS.map((d) => {
-          const isClosed = local[d.key]?.closed;
-          return (
-            <div key={d.key} className="grid grid-cols-12 items-center gap-3 p-3">
-              <div className="col-span-12 sm:col-span-3 flex items-center gap-3">
-                <Switch
-                  checked={!local[d.key]?.closed}
-                  onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
-                />
-                <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
+      {/* List with horizontal scroll and min width to prevent cut-off */}
+      <div className="px-4 pb-4 overflow-x-auto">
+        <div className="min-w-[720px] divide-y rounded-md border">
+          {DAYS.map((d) => {
+            const isClosed = local[d.key]?.closed;
+            return (
+              <div key={d.key} className="grid grid-cols-12 items-center gap-3 p-3">
+                <div className="col-span-4 flex items-center gap-3">
+                  <Switch
+                    checked={!local[d.key]?.closed}
+                    onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
+                  />
+                  <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
+                </div>
+                <div className="col-span-4">
+                  <input
+                    type="time"
+                    className={`form-input w-40 md:w-48 rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                    disabled={isClosed}
+                    value={local[d.key]?.open || "09:00"}
+                    onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
+                  />
+                </div>
+                <div className="col-span-4">
+                  <input
+                    type="time"
+                    className={`form-input w-40 md:w-48 rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                    disabled={isClosed}
+                    value={local[d.key]?.close || "17:30"}
+                    onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
+                  />
+                </div>
               </div>
-              <div className="col-span-6 sm:col-span-4">
-                <input
-                  type="time"
-                  className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
-                  disabled={isClosed}
-                  value={local[d.key]?.open || "09:00"}
-                  onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
-                />
-              </div>
-              <div className="col-span-6 sm:col-span-4">
-                <input
-                  type="time"
-                  className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
-                  disabled={isClosed}
-                  value={local[d.key]?.close || "17:30"}
-                  onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
-                />
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
