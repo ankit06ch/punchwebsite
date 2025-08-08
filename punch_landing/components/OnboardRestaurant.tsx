@@ -64,37 +64,31 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
 
   return (
     <div className="w-full">
-      <div className="divide-y rounded-lg border bg-white">
+      <div className="divide-y rounded-2xl border bg-white p-2 sm:p-4">
         {DAYS.map((d) => {
           const isClosed = local[d.key]?.closed;
           return (
-            <div key={d.key} className="grid grid-cols-12 items-center gap-3 p-3">
-              <div className="col-span-12 sm:col-span-3 flex items-center gap-3">
+            <div key={d.key} className="grid grid-cols-1 md:grid-cols-12 items-center gap-4 p-4">
+              <div className="md:col-span-4 flex items-center gap-4">
                 <Switch
                   checked={!local[d.key]?.closed}
-                  onToggle={() => setLocal((prev) => ({
-                    ...prev,
-                    [d.key]: {
-                      ...(prev[d.key] || { open: "09:00", close: "17:30" }),
-                      closed: !(prev[d.key]?.closed ?? true) ? true : false,
-                    },
-                  }))}
+                  onToggle={() => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { open: "09:00", close: "17:30" }), closed: !(prev[d.key] ? !prev[d.key].closed : false) } }))}
                 />
-                <span className={`text-sm ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
+                <span className={`text-base ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
               </div>
-              <div className="col-span-6 sm:col-span-4">
+              <div className="md:col-span-4">
                 <input
                   type="time"
-                  className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                  className={`form-input w-full rounded-md py-3 ${isClosed ? "opacity-50" : ""}`}
                   disabled={isClosed}
                   value={local[d.key]?.open || "09:00"}
                   onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
                 />
               </div>
-              <div className="col-span-6 sm:col-span-4">
+              <div className="md:col-span-4">
                 <input
                   type="time"
-                  className={`form-input w-full rounded-md py-2 ${isClosed ? "opacity-50" : ""}`}
+                  className={`form-input w-full rounded-md py-3 ${isClosed ? "opacity-50" : ""}`}
                   disabled={isClosed}
                   value={local[d.key]?.close || "17:30"}
                   onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
