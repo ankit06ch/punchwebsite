@@ -274,7 +274,15 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
 
   // Address autocomplete
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
+  type NominatimSuggestion = {
+    display_name: string;
+    lat: string;
+    lon: string;
+    type?: string;
+    class?: string;
+    address?: Record<string, string>;
+  };
+  const [suggestions, setSuggestions] = useState<Array<NominatimSuggestion>>([]);
   const [isOpenSuggest, setIsOpenSuggest] = useState(false);
   const debounceRef = useRef<any>(null);
 
@@ -287,10 +295,21 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     }
     debounceRef.current = setTimeout(async () => {
       try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&q=${encodeURIComponent(query)}&limit=5`;
+        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=us&q=${encodeURIComponent(
+          query
+        )}&limit=8&dedupe=1&accept-language=en`;
         const res = await fetch(url, { headers: { "Accept": "application/json" } });
         const data = await res.json();
-        setSuggestions(Array.isArray(data) ? data : []);
+        const arr = Array.isArray(data) ? (data as NominatimSuggestion[]) : [];
+        // Prefer registerable address-like items (have road and either house number or postcode)
+        const filtered = arr.filter((s) => {
+          const a = s.address || {};
+          const hasRoad = Boolean(a.road);
+          const hasNumberOrPostcode = Boolean(a.house_number) || Boolean(a.postcode);
+          const avoidIntersections = !/(junction|traffic_signals|bus_stop|stop)/i.test(s.type || "");
+          return hasRoad && hasNumberOrPostcode && avoidIntersections;
+        });
+        setSuggestions(filtered);
         setIsOpenSuggest(true);
       } catch {
         setSuggestions([]);
@@ -299,11 +318,24 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     return () => debounceRef.current && clearTimeout(debounceRef.current);
   }, [query, current?.type]);
 
-  const chooseSuggestion = (s: { display_name: string; lat: string; lon: string }) => {
+  const formatAddress = (s: NominatimSuggestion): string => {
+    const a = s.address || {};
+    const line1 = [a.house_number, a.road].filter(Boolean).join(" ");
+    const city = a.city || a.town || a.village || a.hamlet || a.suburb;
+    const state = a.state || a.state_district || a.region;
+    const postal = a.postcode;
+    const country = a.country;
+    return [line1 || s.display_name, [city, state].filter(Boolean).join(", "), [postal, country].filter(Boolean).join(" ")]
+      .filter(Boolean)
+      .join(", ");
+  };
+
+  const chooseSuggestion = (s: NominatimSuggestion) => {
     const lat = parseFloat(s.lat);
     const lon = parseFloat(s.lon);
-    setValues((prev: any) => ({ ...prev, location: s.display_name, coordinates: { lat, lon } }));
-    setQuery(s.display_name);
+    const formatted = formatAddress(s);
+    setValues((prev: any) => ({ ...prev, location: formatted, coordinates: { lat, lon } }));
+    setQuery(formatted);
     setIsOpenSuggest(false);
   };
 
