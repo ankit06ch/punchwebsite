@@ -1,15 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
 
-export default function Logo() {
+export default function Logo({ size = 40 }: { size?: number }) {
   return (
     <Link href="/" className="inline-flex" aria-label="Punch">
       <Image
         src="/images/Punch_T/iconT.png"
-        width={40}
-        height={40}
+        width={size}
+        height={size}
         alt="Punch Logo"
-        className="h-10 w-10"
         priority
       />
     </Link>

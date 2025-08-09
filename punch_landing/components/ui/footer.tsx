@@ -12,10 +12,7 @@ export default function Footer({ border = false }: { border?: boolean }) {
           {/* 1st block */}
           <div className="space-y-2 sm:col-span-12 lg:col-span-4">
             <div className="inline-flex items-center">
-              <div className="h-12 w-12">
-                {/* Scale up logo specifically in footer */}
-                <Logo />
-              </div>
+              <Logo size={56} />
             </div>
             <div className="text-sm text-gray-600">
               &copy; Punch - All rights reserved.
@@ -106,8 +103,9 @@ export default function Footer({ border = false }: { border?: boolean }) {
               <li>
                 <Link
                   className="flex items-center justify-center text-[#FB7A20] transition hover:text-[#e66a1a]"
-                  href="#0"
-                  aria-label="Twitter"
+                  href="https://x.com/punchrewardsapp"
+                  target="_blank" rel="noopener noreferrer"
+                  aria-label="X (Twitter)"
                 >
                   <svg
                     className="h-8 w-8 fill-current"
@@ -121,7 +119,8 @@ export default function Footer({ border = false }: { border?: boolean }) {
               <li>
                 <Link
                   className="flex items-center justify-center text-[#FB7A20] transition hover:text-[#e66a1a]"
-                  href="#0"
+                  href="https://www.instagram.com/punchrewards?igsh=MWplN3k4MjR4bGJ4ZQ%3D%3D&utm_source=qr"
+                  target="_blank" rel="noopener noreferrer"
                   aria-label="Instagram"
                 >
                   <svg
