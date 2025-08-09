@@ -24,7 +24,7 @@ export default function Header() {
             </li>
             <li>
               <Link
-                href="#0"
+                href="/waitlist"
                 className="btn-sm bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]"
               >
                 Download App

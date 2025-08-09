@@ -49,7 +49,7 @@ export default function HeroHome() {
                 >
                   <a
                     className="btn group mb-4 w-full bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a] sm:mb-0 sm:w-auto"
-                    href="#0"
+                    href="/waitlist"
                   >
                     <span className="relative inline-flex items-center">
                       Download App{" "}
@@ -60,7 +60,7 @@ export default function HeroHome() {
                   </a>
                   <a
                     className="btn w-full bg-white text-gray-800 shadow-sm hover:bg-gray-50 sm:ml-4 sm:w-auto"
-                    href="#0"
+                    href="/login"
                   >
                     For Businesses
                   </a>

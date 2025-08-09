@@ -27,7 +27,7 @@ export default function Cta() {
             <div className="mx-auto max-w-xs sm:flex sm:max-w-none sm:justify-center sm:space-x-4">
               <a
                 className="btn group mb-4 w-full bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a] sm:mb-0 sm:w-auto"
-                href="#0"
+                href="/waitlist"
               >
                 <span className="relative inline-flex items-center">
                   Download App{" "}
@@ -38,7 +38,7 @@ export default function Cta() {
               </a>
               <a
                 className="btn w-full bg-white text-gray-800 shadow-sm hover:bg-gray-50 sm:w-auto"
-                href="#0"
+                href="/login"
               >
                 For Businesses
               </a>
