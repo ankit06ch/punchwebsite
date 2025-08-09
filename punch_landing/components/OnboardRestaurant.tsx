@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import mapboxgl from "mapbox-gl";
+import { auth, storage } from "@/app/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // ---------------- Hours Editor ----------------
 const DAYS: Array<{ key: string; label: string }> = [
@@ -258,7 +260,7 @@ const steps = [
   { key: "price", label: "Price", placeholder: "$$$", type: "text" },
   { key: "location", label: "Address", placeholder: "123 Main St, San Francisco, CA", type: "address" },
   { key: "hours", label: "Hours", type: "hours" },
-  { key: "logoUrl", label: "Logo URL", placeholder: "https://placehold.co/64x64?text=S", type: "url" },
+  { key: "logoUrl", label: "Upload Logo", type: "logo" },
   { key: "rating", label: "Rating", placeholder: "4.7", type: "number", min: 0, max: 5, step: 0.1 },
 ];
 
@@ -359,6 +361,19 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     setValues({ ...values, cuisines });
   };
 
+  const handleLogoUpload = async (file: File) => {
+    if (!file) return;
+    const user = auth.currentUser;
+    const ownerId = user?.uid || "anonymous";
+    const fileExt = file.name.split(".").pop() || "png";
+    const fileName = `logo_${Date.now()}.${fileExt}`;
+    const storagePath = `business-logos/${ownerId}/${fileName}`;
+    const fileRef = ref(storage, storagePath);
+    const snapshot = await uploadBytes(fileRef, file, { contentType: file.type });
+    const url = await getDownloadURL(snapshot.ref);
+    setValues((prev: any) => ({ ...prev, logoUrl: url }));
+  };
+
   if (step === -1) {
     return (
       <div className="max-w-lg mx-auto mt-24 p-10 rounded-3xl shadow-2xl flex flex-col items-center bg-white/30 backdrop-blur-md border border-white/40 relative overflow-hidden">
@@ -442,6 +457,30 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
               <div>
                 <MapPreview lat={defaultCenter.lat} lon={defaultCenter.lon} />
               </div>
+            </div>
+          )}
+
+          {current.type === "logo" && (
+            <div className="space-y-3">
+              {values.logoUrl ? (
+                <div className="flex items-center gap-3">
+                  <img src={values.logoUrl} alt="Logo preview" className="h-16 w-16 rounded object-cover border" />
+                  <button type="button" className="px-3 py-2 rounded border border-gray-300 text-gray-700" onClick={() => setValues({ ...values, logoUrl: "" })}>Remove</button>
+                </div>
+              ) : (
+                <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 p-6 text-center hover:bg-gray-50">
+                  <span className="text-sm text-gray-600">Click to upload a logo (PNG/JPG)</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) await handleLogoUpload(file);
+                    }}
+                  />
+                </label>
+              )}
             </div>
           )}
 
