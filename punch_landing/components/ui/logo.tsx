@@ -5,11 +5,12 @@ export default function Logo() {
   return (
     <Link href="/" className="inline-flex" aria-label="Punch">
       <Image
-        src="/images/Punch_T/black_logo.png"
-        width={56}
-        height={56}
+        src="/images/Punch_T/iconT.png"
+        width={40}
+        height={40}
         alt="Punch Logo"
-        className="h-14 w-auto"
+        className="h-10 w-10"
+        priority
       />
     </Link>
   );

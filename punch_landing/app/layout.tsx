@@ -14,7 +14,7 @@ export const metadata = {
   title: "Punch - Digital Loyalty Rewards App",
   description: "Punch is a modern loyalty app that rewards people for visiting their favorite local spots. Earn digital punches and unlock exclusive rewards at local businesses.",
   icons: {
-    icon: "/images/Punch_T/black_logo.png",
+    icon: "/images/Punch_T/iconT.png",
   },
 };
 
