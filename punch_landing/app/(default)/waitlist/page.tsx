@@ -4,10 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { auth, db } from "@/app/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-export const metadata = {
-  title: "You're on the waitlist • Punch",
-  description: "Thanks for joining the Punch waitlist",
-};
+// Removed metadata export because this is a client component
 
 type Move = "U" | "D" | "L" | "R";
 
@@ -171,7 +168,7 @@ export default function Waitlist() {
 
           {/* Sequence display */}
           <div className="mb-4 grid grid-cols-4 gap-3 sm:gap-4">
-            {(Object.keys(MOVE_INFO) as Move[]).map((m, idx) => (
+            {(Object.keys(MOVE_INFO) as Move[]).map((m) => (
               <div
                 key={m}
                 className={`flex h-16 items-center justify-center rounded-lg border bg-white text-2xl sm:h-20 ${
