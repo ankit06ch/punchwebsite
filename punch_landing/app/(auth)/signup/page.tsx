@@ -129,8 +129,8 @@ export default function SignUp() {
         await new Promise((resolve) => setTimeout(resolve, MIN_OVERLAY_MS - elapsed));
       }
 
-      // 5) Navigate to dashboard
-      router.push("/dashboard");
+      // 5) Navigate to waitlist
+      router.push("/waitlist");
     } catch (err: any) {
       setError(err.message || "Failed to create account");
       setShowOnboard(false);
