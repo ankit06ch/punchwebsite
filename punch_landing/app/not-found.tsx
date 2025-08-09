@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Header from "@/components/ui/header";
+import Footer from "@/components/ui/footer";
 
 export default function NotFound() {
   const puns = useMemo(
@@ -52,9 +53,11 @@ export default function NotFound() {
   }, [typed, phase, index, puns]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
-      <div className="mx-auto max-w-2xl px-4 py-16">
-        <div className="flex min-h-[80vh] flex-col justify-center">
+    <>
+      <Header />
+      <main className="grow bg-gradient-to-b from-orange-50 to-white">
+        <div className="mx-auto max-w-2xl px-4 py-24">
+          <div className="flex min-h-[60vh] flex-col justify-center">
           {/* Header */}
           <div className="mb-6 flex items-start gap-3">
             <div className="text-4xl">🥊</div>
@@ -76,15 +79,11 @@ export default function NotFound() {
             </div>
           </div>
 
-          {/* CTA */}
-          <div className="mt-8">
-            <Link href="/" className="btn bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]">
-              Go Home
-            </Link>
           </div>
         </div>
-      </div>
-    </div>
+      </main>
+      <Footer border={true} />
+    </>
   );
 }
 
