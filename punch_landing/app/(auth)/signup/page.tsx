@@ -47,15 +47,19 @@ export default function SignUp() {
       }
 
       // 3) Persist restaurant document with owner UID and collected values
-      await addDoc(collection(db, "restaraunts"), {
-        ...restaurantValues,
+      const { logoFile, ...restValues } = restaurantValues || {};
+      const docData: any = {
+        ...restValues,
         logoUrl: finalLogoUrl,
-        logoFile: undefined,
         owner: cred.user.uid,
         ownerName: pendingAccount.name,
         ownerPhone: pendingAccount.phone,
         createdAt: new Date(),
+      };
+      Object.keys(docData).forEach((k) => {
+        if (docData[k] === undefined) delete docData[k];
       });
+      await addDoc(collection(db, "restaraunts"), docData);
 
       // 4) Navigate to dashboard
       router.push("/dashboard");
