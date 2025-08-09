@@ -1,241 +1,104 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { auth, db } from "@/app/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-
-type Move = "U" | "D" | "L" | "R";
-
-const MOVE_INFO: Record<Move, { label: string; icon: string; keyHints: string[] }> = {
-  U: { label: "Up", icon: "⬆️", keyHints: ["ArrowUp", "w", "W"] },
-  D: { label: "Down", icon: "⬇️", keyHints: ["ArrowDown", "s", "S"] },
-  L: { label: "Left", icon: "⬅️", keyHints: ["ArrowLeft", "a", "A"] },
-  R: { label: "Right", icon: "➡️", keyHints: ["ArrowRight", "d", "D"] },
-};
-
-function randomMove(): Move {
-  const keys: Move[] = ["U", "D", "L", "R"];
-  return keys[Math.floor(Math.random() * keys.length)];
-}
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function Waitlist() {
-  const [phase, setPhase] = useState<"idle" | "showing" | "input" | "over" | "won">("idle");
-  const [round, setRound] = useState(1);
-  const [sequence, setSequence] = useState<Move[]>([]);
-  const [showIndex, setShowIndex] = useState(-1);
-  const [inputIndex, setInputIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const showTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Typewriter jokes (from your list)
+  const jokes = useMemo(
+    () => [
+      // Boxing/Punch-themed
+      "You’re on the ropes… but in a good way. We’ll be in your corner soon!",
+      "Hold tight — we’re winding up for a knockout launch.",
+      "You’ve landed a spot on our waitlist. That’s a solid uppercut to boredom.",
+      "We’re just wrapping up training camp before we let you in.",
+      // Drink-themed
+      "Good things take time to brew — you’re next in line for the good stuff.",
+      "Your spot’s reserved — we’re just adding the final splash.",
+      "The party starts soon, and you’re on the guest sip list.",
+      // General cheeky
+      "Patience is a virtue… but we promise this will pack a punch.",
+      "We’re polishing our gloves — you’ll get the first swing at it soon.",
+      "You’re in the ring now. All that’s left is the bell.",
+    ],
+    []
+  );
 
-  const rank = useMemo(() => {
-    if (score >= 8) return "Champion";
-    if (score >= 4) return "Heavyweight";
-    return "Contender";
-  }, [score]);
+  const [typed, setTyped] = useState("");
+  const [index, setIndex] = useState(0);
+  const [phase, setPhase] = useState<"typing" | "pausing" | "deleting">("typing");
+  const rafRef = useRef<number | null>(null);
 
-  const startGame = useCallback(() => {
-    setScore(0);
-    setRound(1);
-    const initial: Move[] = [randomMove(), randomMove(), randomMove()];
-    setSequence(initial);
-    setInputIndex(0);
-    setPhase("showing");
-  }, []);
-
-  const extendSequence = useCallback(() => {
-    setSequence((prev) => [...prev, randomMove()]);
-    setInputIndex(0);
-    setPhase("showing");
-  }, []);
-
-  // Play the current sequence visually
   useEffect(() => {
-    if (phase !== "showing") return;
-    let i = 0;
-    setShowIndex(-1);
-    const step = () => {
-      setShowIndex((prev) => prev + 1);
-      i++;
-      if (i < sequence.length) {
-        showTimerRef.current = setTimeout(step, 650);
-      } else {
-        // small pause before input
-        showTimerRef.current = setTimeout(() => {
-          setShowIndex(-1);
-          setInputIndex(0);
-          setPhase("input");
-        }, 500);
+    const current = jokes[index % jokes.length];
+    const tick = () => {
+      if (phase === "typing") {
+        if (typed.length < current.length) {
+          setTyped(current.slice(0, typed.length + 1));
+          rafRef.current = requestAnimationFrame(tick);
+        } else {
+          setPhase("pausing");
+          setTimeout(() => setPhase("deleting"), 1600);
+        }
+      } else if (phase === "deleting") {
+        if (typed.length > 0) {
+          setTyped(current.slice(0, typed.length - 1));
+          rafRef.current = requestAnimationFrame(tick);
+        } else {
+          setIndex((i) => (i + 1) % jokes.length);
+          setPhase("typing");
+          rafRef.current = requestAnimationFrame(tick);
+        }
       }
     };
-    showTimerRef.current = setTimeout(step, 250);
+    rafRef.current = requestAnimationFrame(tick);
     return () => {
-      if (showTimerRef.current) clearTimeout(showTimerRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [phase, sequence.length]);
-
-  // Key input handler
-  useEffect(() => {
-    if (phase !== "input") return;
-    const onKey = (e: KeyboardEvent) => {
-      const key = e.key;
-      let move: Move | null = null;
-      (Object.keys(MOVE_INFO) as Move[]).forEach((m) => {
-        if (MOVE_INFO[m].keyHints.includes(key)) move = m;
-      });
-      if (!move) return;
-
-      const expected = sequence[inputIndex];
-      if (move === expected) {
-        setInputIndex((i) => i + 1);
-        setScore((s) => s + 1);
-        if (inputIndex + 1 === sequence.length) {
-          if (round >= 3) {
-            setPhase("won");
-          } else {
-            setRound((r) => r + 1);
-            extendSequence();
-          }
-        }
-      } else {
-        setPhase("over");
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [phase, inputIndex, round, sequence, extendSequence]);
-
-  // Save high score on finish
-  useEffect(() => {
-    const save = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-      const ref = doc(db, "waitlist_scores", user.uid);
-      const snap = await getDoc(ref);
-      const prev = snap.exists() ? (snap.data().highScore as number) || 0 : 0;
-      const highScore = Math.max(prev, score);
-      await setDoc(
-        ref,
-        {
-          highScore,
-          lastScore: score,
-          lastRank: rank,
-          updatedAt: new Date(),
-          foundersBadge: highScore >= 8,
-        },
-        { merge: true }
-      );
-    };
-    if (phase === "over" || phase === "won") {
-      save().catch(() => {});
-    }
-  }, [phase, score, rank]);
-
-  const pressMove = (m: Move) => {
-    if (phase !== "input") return;
-    const expected = sequence[inputIndex];
-    if (m === expected) {
-      setInputIndex((i) => i + 1);
-      setScore((s) => s + 1);
-      if (inputIndex + 1 === sequence.length) {
-        if (round >= 3) setPhase("won");
-        else {
-          setRound((r) => r + 1);
-          extendSequence();
-        }
-      }
-    } else {
-      setPhase("over");
-    }
-  };
-
-  const activeDuringShow = showIndex >= 0 ? sequence[showIndex] : null;
-  const activeDuringInput = sequence[inputIndex];
+  }, [typed, phase, index, jokes]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
-      <div className="mx-auto max-w-4xl px-4 py-14">
+      <div className="mx-auto max-w-2xl px-4 py-16">
         {/* Header */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="text-3xl">🥊</div>
+        <div className="mb-6 flex items-start gap-3">
+          <div className="text-4xl">🥊</div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">You're on the waitlist… but your first punch is coming.</h1>
-            <p className="text-sm text-gray-600">Play “Guess the Combo” while we prep your spot.</p>
+            <h1 className="text-3xl font-extrabold tracking-tight">You're on the waitlist… but your first punch is coming.</h1>
+            <p className="text-sm text-gray-600">Thanks for joining Punch — we’ll notify you when your dashboard is ready.</p>
           </div>
         </div>
 
-        {/* Game shell */}
-        <div className="relative overflow-hidden rounded-2xl border bg-white p-6 shadow-xl">
+        {/* Joke typer card */}
+        <div className="relative overflow-hidden rounded-2xl border bg-white p-8 shadow-xl">
           {/* Glow */}
           <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[#FB7A20]/20 blur-3xl" />
 
-          {/* HUD */}
-          <div className="mb-4 grid grid-cols-3 gap-3 text-sm">
-            <div className="rounded-lg border bg-gray-50 p-3 text-gray-700">Round <span className="font-semibold">{round}/3</span></div>
-            <div className="rounded-lg border bg-gray-50 p-3 text-gray-700">Score <span className="font-semibold">{score}</span></div>
-            <div className="rounded-lg border bg-gray-50 p-3 text-gray-700">Title <span className="font-semibold">{rank}</span></div>
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Today’s ringside commentary</div>
+          <div className="min-h-[3rem] text-lg font-medium text-gray-900">
+            {typed}
+            <span className="ml-1 inline-block h-5 w-[2px] animate-pulse bg-gray-900 align-middle" />
           </div>
+          <div className="mt-3 text-xs text-gray-500">We rotate these while we finish setting things up.</div>
+        </div>
 
-          {/* Combo trail */}
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            {sequence.map((m, i) => {
-              const isActive = phase === "showing" ? i === showIndex : i < inputIndex;
-              return (
-                <div key={i} className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs ${isActive ? "bg-[#FB7A20] text-white border-[#FB7A20]" : "bg-white text-gray-600"}`}>
-                  {MOVE_INFO[m].icon}
-                </div>
-              );
-            })}
+        {/* Next steps */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border bg-white p-5 shadow-sm">
+            <div className="mb-1 text-sm font-semibold">What happens next?</div>
+            <ul className="list-inside list-disc text-sm text-gray-700">
+              <li>We’ll verify your details and enable your dashboard.</li>
+              <li>We’ll email you when it’s live — keep an eye on your inbox.</li>
+              <li>Have a square logo ready (512×512+) for best results.</li>
+            </ul>
           </div>
-
-          {/* Arena: four glowing pads */}
-          <div className="mb-6 grid grid-cols-4 gap-3 sm:gap-4">
-            {(Object.keys(MOVE_INFO) as Move[]).map((m) => {
-              const glow =
-                (phase === "showing" && activeDuringShow === m) ||
-                (phase === "input" && activeDuringInput === m);
-              return (
-                <div key={m} className={`relative flex h-20 items-center justify-center rounded-xl border bg-white text-3xl sm:h-24 ${glow ? "ring-4 ring-[#FB7A20] shadow-[0_0_24px_rgba(251,122,32,0.35)]" : ""}`}>
-                  <div className={`absolute -z-10 h-24 w-24 rounded-full ${glow ? "bg-[#FB7A20]/20 blur-xl" : ""}`} />
-                  {MOVE_INFO[m].icon}
-                </div>
-              );
-            })}
+          <div className="rounded-xl border bg-white p-5 shadow-sm">
+            <div className="mb-1 text-sm font-semibold">Want to speed things up?</div>
+            <ul className="list-inside list-disc text-sm text-gray-700">
+              <li>Complete all onboarding steps thoroughly.</li>
+              <li>Reply to any verification emails promptly.</li>
+              <li>Invite your teammates — we’ll prioritize active teams.</li>
+            </ul>
           </div>
-
-          {/* D‑Pad controls */}
-          <div className="mb-4 grid grid-cols-3 place-items-center gap-2 sm:gap-3">
-            <div />
-            <button onClick={() => pressMove("U")} className="h-12 w-12 rounded-lg border bg-white text-xl shadow-sm hover:shadow ring-0 hover:ring-2 hover:ring-[#FB7A20]">{MOVE_INFO.U.icon}</button>
-            <div />
-            <button onClick={() => pressMove("L")} className="h-12 w-12 rounded-lg border bg-white text-xl shadow-sm hover:shadow ring-0 hover:ring-2 hover:ring-[#FB7A20]">{MOVE_INFO.L.icon}</button>
-            <button onClick={() => pressMove("D")} className="h-12 w-12 rounded-lg border bg-white text-xl shadow-sm hover:shadow ring-0 hover:ring-2 hover:ring-[#FB7A20]">{MOVE_INFO.D.icon}</button>
-            <button onClick={() => pressMove("R")} className="h-12 w-12 rounded-lg border bg-white text-xl shadow-sm hover:shadow ring-0 hover:ring-2 hover:ring-[#FB7A20]">{MOVE_INFO.R.icon}</button>
-          </div>
-
-          {/* Status & overlays */}
-          {phase === "idle" && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
-              <div className="rounded-2xl border bg-white p-6 text-center shadow-xl">
-                <div className="mb-2 text-2xl">🥊 Guess the Combo</div>
-                <div className="mb-4 text-sm text-gray-600">We’ll flash a combo (1–2s). Recreate it with WASD / Arrow keys, or tap the buttons. Three rounds. Ready?</div>
-                <button className="btn bg-[#FB7A20] text-white hover:bg-[#e66a1a]" onClick={startGame}>Start</button>
-              </div>
-            </div>
-          )}
-
-          {phase === "input" && (
-            <div className="text-center text-sm text-gray-700">Your turn! Type the combo using WASD/Arrows or tap the buttons.</div>
-          )}
-          {phase === "showing" && (
-            <div className="text-center text-sm text-gray-700">Watch closely… combo incoming 🥊</div>
-          )}
-          {(phase === "over" || phase === "won") && (
-            <div className="mt-3 flex flex-col items-center gap-2 text-center">
-              <div className="text-lg font-semibold">{phase === "won" ? "Knockout!" : "Nice try!"}</div>
-              <div className="text-sm text-gray-700">Punch Score: <span className="font-semibold">{score}</span> • Title: <span className="font-semibold">{rank}</span></div>
-              <button className="btn bg-[#FB7A20] text-white hover:bg-[#e66a1a]" onClick={startGame}>Play again</button>
-            </div>
-          )}
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
