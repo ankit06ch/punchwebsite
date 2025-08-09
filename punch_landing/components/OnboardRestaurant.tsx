@@ -287,7 +287,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     }
     debounceRef.current = setTimeout(async () => {
       try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}&limit=5`;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&q=${encodeURIComponent(query)}&limit=5`;
         const res = await fetch(url, { headers: { "Accept": "application/json" } });
         const data = await res.json();
         setSuggestions(Array.isArray(data) ? data : []);
