@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { auth, db } from "@/app/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-// Removed metadata export because this is a client component
-
 type Move = "U" | "D" | "L" | "R";
 
 const MOVE_INFO: Record<Move, { label: string; icon: string; keyHints: string[] }> = {
@@ -94,7 +92,6 @@ export default function Waitlist() {
           if (round >= 3) {
             setPhase("won");
           } else {
-            // Next round: extend sequence by one
             setRound((r) => r + 1);
             extendSequence();
           }
@@ -151,54 +148,83 @@ export default function Waitlist() {
     }
   };
 
+  const activeDuringShow = showIndex >= 0 ? sequence[showIndex] : null;
+  const activeDuringInput = sequence[inputIndex];
+
   return (
-    <div className="mx-auto max-w-3xl py-16">
-      <div className="relative overflow-hidden rounded-2xl border bg-white p-8 shadow-xl">
-        <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[#FB7A20]/20 blur-3xl" />
-        <h1 className="mb-2 text-3xl font-extrabold tracking-tight">You're on the waitlist… but your first punch is coming.</h1>
-        <p className="mb-6 text-gray-700">Play “Guess the Combo” while we prep your spot.</p>
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
+      <div className="mx-auto max-w-4xl px-4 py-14">
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-3">
+          <div className="text-3xl">🥊</div>
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">You're on the waitlist… but your first punch is coming.</h1>
+            <p className="text-sm text-gray-600">Play “Guess the Combo” while we prep your spot.</p>
+          </div>
+        </div>
 
-        {/* Game area */}
-        <div className="rounded-xl border bg-gray-50 p-4">
-          <div className="mb-3 flex items-center justify-between text-sm text-gray-700">
-            <div>Round: <span className="font-semibold">{round}/3</span></div>
-            <div>Score: <span className="font-semibold">{score}</span></div>
-            <div>Rank: <span className="font-semibold">{rank}</span></div>
+        {/* Game shell */}
+        <div className="relative overflow-hidden rounded-2xl border bg-white p-6 shadow-xl">
+          {/* Glow */}
+          <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[#FB7A20]/20 blur-3xl" />
+
+          {/* HUD */}
+          <div className="mb-4 grid grid-cols-3 gap-3 text-sm">
+            <div className="rounded-lg border bg-gray-50 p-3 text-gray-700">Round <span className="font-semibold">{round}/3</span></div>
+            <div className="rounded-lg border bg-gray-50 p-3 text-gray-700">Score <span className="font-semibold">{score}</span></div>
+            <div className="rounded-lg border bg-gray-50 p-3 text-gray-700">Title <span className="font-semibold">{rank}</span></div>
           </div>
 
-          {/* Sequence display */}
-          <div className="mb-4 grid grid-cols-4 gap-3 sm:gap-4">
-            {(Object.keys(MOVE_INFO) as Move[]).map((m) => (
-              <div
-                key={m}
-                className={`flex h-16 items-center justify-center rounded-lg border bg-white text-2xl sm:h-20 ${
-                  showIndex >= 0 && sequence[showIndex] === m ? "ring-2 ring-[#FB7A20] scale-105 transition" : ""
-                }`}
-              >
-                {MOVE_INFO[m].icon}
-              </div>
-            ))}
+          {/* Combo trail */}
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            {sequence.map((m, i) => {
+              const isActive = phase === "showing" ? i === showIndex : i < inputIndex;
+              return (
+                <div key={i} className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs ${isActive ? "bg-[#FB7A20] text-white border-[#FB7A20]" : "bg-white text-gray-600"}`}>
+                  {MOVE_INFO[m].icon}
+                </div>
+              );
+            })}
           </div>
 
-          {/* On-screen controls */}
-          <div className="mb-3 grid grid-cols-3 place-items-center gap-2 sm:gap-3">
+          {/* Arena: four glowing pads */}
+          <div className="mb-6 grid grid-cols-4 gap-3 sm:gap-4">
+            {(Object.keys(MOVE_INFO) as Move[]).map((m) => {
+              const glow =
+                (phase === "showing" && activeDuringShow === m) ||
+                (phase === "input" && activeDuringInput === m);
+              return (
+                <div key={m} className={`relative flex h-20 items-center justify-center rounded-xl border bg-white text-3xl sm:h-24 ${glow ? "ring-4 ring-[#FB7A20] shadow-[0_0_24px_rgba(251,122,32,0.35)]" : ""}`}>
+                  <div className={`absolute -z-10 h-24 w-24 rounded-full ${glow ? "bg-[#FB7A20]/20 blur-xl" : ""}`} />
+                  {MOVE_INFO[m].icon}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* D‑Pad controls */}
+          <div className="mb-4 grid grid-cols-3 place-items-center gap-2 sm:gap-3">
             <div />
-            <button onClick={() => pressMove("U")} className="h-12 w-12 rounded-lg border bg-white text-xl hover:bg-gray-100">{MOVE_INFO.U.icon}</button>
+            <button onClick={() => pressMove("U")} className="h-12 w-12 rounded-lg border bg-white text-xl shadow-sm hover:shadow ring-0 hover:ring-2 hover:ring-[#FB7A20]">{MOVE_INFO.U.icon}</button>
             <div />
-            <button onClick={() => pressMove("L")} className="h-12 w-12 rounded-lg border bg-white text-xl hover:bg-gray-100">{MOVE_INFO.L.icon}</button>
-            <button onClick={() => pressMove("D")} className="h-12 w-12 rounded-lg border bg-white text-xl hover:bg-gray-100">{MOVE_INFO.D.icon}</button>
-            <button onClick={() => pressMove("R")} className="h-12 w-12 rounded-lg border bg-white text-xl hover:bg-gray-100">{MOVE_INFO.R.icon}</button>
+            <button onClick={() => pressMove("L")} className="h-12 w-12 rounded-lg border bg-white text-xl shadow-sm hover:shadow ring-0 hover:ring-2 hover:ring-[#FB7A20]">{MOVE_INFO.L.icon}</button>
+            <button onClick={() => pressMove("D")} className="h-12 w-12 rounded-lg border bg-white text-xl shadow-sm hover:shadow ring-0 hover:ring-2 hover:ring-[#FB7A20]">{MOVE_INFO.D.icon}</button>
+            <button onClick={() => pressMove("R")} className="h-12 w-12 rounded-lg border bg-white text-xl shadow-sm hover:shadow ring-0 hover:ring-2 hover:ring-[#FB7A20]">{MOVE_INFO.R.icon}</button>
           </div>
 
-          {/* Status & controls */}
+          {/* Status & overlays */}
           {phase === "idle" && (
-            <div className="flex flex-col items-center gap-3 text-sm text-gray-700">
-              <div>We’ll flash a combo (1–2s). Recreate it with WASD or arrow keys — or tap the buttons.</div>
-              <button className="btn bg-[#FB7A20] text-white hover:bg-[#e66a1a]" onClick={startGame}>Start</button>
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+              <div className="rounded-2xl border bg-white p-6 text-center shadow-xl">
+                <div className="mb-2 text-2xl">🥊 Guess the Combo</div>
+                <div className="mb-4 text-sm text-gray-600">We’ll flash a combo (1–2s). Recreate it with WASD / Arrow keys, or tap the buttons. Three rounds. Ready?</div>
+                <button className="btn bg-[#FB7A20] text-white hover:bg-[#e66a1a]" onClick={startGame}>Start</button>
+              </div>
             </div>
           )}
+
           {phase === "input" && (
-            <div className="text-center text-sm text-gray-700">Your turn! Type the combo using WASD/Arrow keys or tap the buttons.</div>
+            <div className="text-center text-sm text-gray-700">Your turn! Type the combo using WASD/Arrows or tap the buttons.</div>
           )}
           {phase === "showing" && (
             <div className="text-center text-sm text-gray-700">Watch closely… combo incoming 🥊</div>
