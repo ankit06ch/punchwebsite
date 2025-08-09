@@ -262,7 +262,6 @@ const steps = [
   { key: "location", label: "Address", placeholder: "123 Main St, San Francisco, CA", type: "address" },
   { key: "hours", label: "Hours", type: "hours" },
   { key: "logoUrl", label: "Upload Logo", type: "logo" },
-  { key: "rating", label: "Rating", placeholder: "4.7", type: "number", min: 0, max: 5, step: 0.1 },
 ];
 
 export default function OnboardRestaurant({ onComplete }: { onComplete: (values: any) => void }) {
@@ -484,9 +483,9 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
               id={current.key}
               name={current.key}
               type={current.type}
-              min={current.min}
-              max={current.max}
-              step={current.step}
+              min={(current as any)?.min}
+              max={(current as any)?.max}
+              step={(current as any)?.step}
               placeholder={current.placeholder}
               value={values[current.key] || ""}
               onChange={handleChange}
