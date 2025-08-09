@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import mapboxgl from "mapbox-gl";
+import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
 import { auth, storage } from "@/app/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -468,8 +469,10 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                   <button type="button" className="px-3 py-2 rounded border border-gray-300 text-gray-700" onClick={() => setValues({ ...values, logoUrl: "" })}>Remove</button>
                 </div>
               ) : (
-                <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 p-6 text-center hover:bg-gray-50">
-                  <span className="text-sm text-gray-600">Click to upload a logo (PNG/JPG)</span>
+                <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-300 p-6 text-center hover:bg-gray-50">
+                  <CloudArrowUpIcon className="h-8 w-8 text-gray-500" aria-hidden="true" />
+                  <span className="text-sm text-gray-700">Click to upload a logo (PNG/JPG)</span>
+                  <span className="text-xs text-gray-500">Recommended: square image, at least 256×256</span>
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/jpg"
@@ -484,20 +487,20 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
             </div>
           )}
 
-          {current.type !== "hours" && current.type !== "address" && current.type !== "cuisines" && (
-          <input
-            id={current.key}
-            name={current.key}
-            type={current.type}
-            min={current.min}
-            max={current.max}
-            step={current.step}
-            placeholder={current.placeholder}
-            value={values[current.key] || ""}
-            onChange={handleChange}
+          {current.type !== "hours" && current.type !== "address" && current.type !== "cuisines" && current.type !== "logo" && (
+            <input
+              id={current.key}
+              name={current.key}
+              type={current.type}
+              min={current.min}
+              max={current.max}
+              step={current.step}
+              placeholder={current.placeholder}
+              value={values[current.key] || ""}
+              onChange={handleChange}
               className="form-input w-full py-2"
-            autoFocus
-          />
+              autoFocus
+            />
           )}
 
           {error && <div className="text-red-600 text-sm">{error}</div>}
