@@ -91,6 +91,8 @@ export default function SignUp() {
     if (!pendingAccount) return;
     setLoading(true);
     setError("");
+    const overlayStart = Date.now();
+    const MIN_OVERLAY_MS = 2000; // keep the fun message visible briefly
     try {
       // 1) Create the auth user now that onboarding is done
       const cred = await createUserWithEmailAndPassword(auth, pendingAccount.email, pendingAccount.password);
@@ -121,7 +123,13 @@ export default function SignUp() {
       });
       await addDoc(collection(db, "restaraunts"), docData);
 
-      // 4) Navigate to dashboard
+      // 4) Ensure the overlay is visible for at least a short time
+      const elapsed = Date.now() - overlayStart;
+      if (elapsed < MIN_OVERLAY_MS) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_OVERLAY_MS - elapsed));
+      }
+
+      // 5) Navigate to dashboard
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to create account");
