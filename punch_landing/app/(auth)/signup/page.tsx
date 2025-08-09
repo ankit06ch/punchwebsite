@@ -2,10 +2,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/app/firebase";
+import { auth, db, storage } from "@/app/firebase";
 import OnboardRestaurant from "@/components/OnboardRestaurant";
 import { useRouter } from "next/navigation";
 import { addDoc, collection } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
@@ -34,16 +35,29 @@ export default function SignUp() {
       // 1) Create the auth user now that onboarding is done
       const cred = await createUserWithEmailAndPassword(auth, pendingAccount.email, pendingAccount.password);
 
-      // 2) Persist restaurant document with owner UID and collected values
+      // 2) If a logo file was selected, upload it now with authenticated user
+      let finalLogoUrl = restaurantValues.logoUrl || "";
+      if (restaurantValues.logoFile) {
+        const file: File = restaurantValues.logoFile as File;
+        const ext = file.name.split(".").pop() || "png";
+        const path = `business-logos/${cred.user.uid}/logo_${Date.now()}.${ext}`;
+        const fileRef = ref(storage, path);
+        const snap = await uploadBytes(fileRef, file, { contentType: file.type });
+        finalLogoUrl = await getDownloadURL(snap.ref);
+      }
+
+      // 3) Persist restaurant document with owner UID and collected values
       await addDoc(collection(db, "restaraunts"), {
         ...restaurantValues,
+        logoUrl: finalLogoUrl,
+        logoFile: undefined,
         owner: cred.user.uid,
         ownerName: pendingAccount.name,
         ownerPhone: pendingAccount.phone,
         createdAt: new Date(),
       });
 
-      // 3) Navigate to dashboard
+      // 4) Navigate to dashboard
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to create account");

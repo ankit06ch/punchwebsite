@@ -267,7 +267,7 @@ const steps = [
 
 export default function OnboardRestaurant({ onComplete }: { onComplete: (values: any) => void }) {
   const [step, setStep] = useState(-1); // -1 means intro card
-  const [values, setValues] = useState<any>({ cuisines: [] as string[] });
+  const [values, setValues] = useState<any>({ cuisines: [] as string[], logoFile: null as File | null, logoUrl: "" });
   const [error, setError] = useState("");
   const [loading] = useState(false);
 
@@ -358,21 +358,13 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     setValues((prev: any) => ({ ...prev, hours }));
   }, []);
 
-  const handleCuisinesChange = (cuisines: string[]) => {
-    setValues({ ...values, cuisines });
+  const handleLogoSelect = (file: File) => {
+    const previewUrl = URL.createObjectURL(file);
+    setValues((prev: any) => ({ ...prev, logoFile: file, logoUrl: previewUrl }));
   };
 
-  const handleLogoUpload = async (file: File) => {
-    if (!file) return;
-    const user = auth.currentUser;
-    const ownerId = user?.uid || "anonymous";
-    const fileExt = file.name.split(".").pop() || "png";
-    const fileName = `logo_${Date.now()}.${fileExt}`;
-    const storagePath = `business-logos/${ownerId}/${fileName}`;
-    const fileRef = ref(storage, storagePath);
-    const snapshot = await uploadBytes(fileRef, file, { contentType: file.type });
-    const url = await getDownloadURL(snapshot.ref);
-    setValues((prev: any) => ({ ...prev, logoUrl: url }));
+  const handleCuisinesChange = (cuisines: string[]) => {
+    setValues({ ...values, cuisines });
   };
 
   if (step === -1) {
@@ -466,7 +458,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
               {values.logoUrl ? (
                 <div className="flex items-center gap-3">
                   <img src={values.logoUrl} alt="Logo preview" className="h-16 w-16 rounded object-cover border" />
-                  <button type="button" className="px-3 py-2 rounded border border-gray-300 text-gray-700" onClick={() => setValues({ ...values, logoUrl: "" })}>Remove</button>
+                  <button type="button" className="px-3 py-2 rounded border border-gray-300 text-gray-700" onClick={() => setValues({ ...values, logoUrl: "", logoFile: null })}>Remove</button>
                 </div>
               ) : (
                 <label className="flex w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-300 p-6 text-center hover:bg-gray-50">
@@ -479,7 +471,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                     className="hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
-                      if (file) await handleLogoUpload(file);
+                      if (file) handleLogoSelect(file);
                     }}
                   />
                 </label>
