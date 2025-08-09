@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db, storage } from "@/app/firebase";
@@ -18,6 +18,66 @@ export default function SignUp() {
   const [showOnboard, setShowOnboard] = useState(false);
   const [pendingAccount, setPendingAccount] = useState<{ email: string; password: string; name: string; phone: string } | null>(null);
   const router = useRouter();
+
+  // Friendly rotating messages with a simple typewriter effect
+  const messages = useMemo(
+    () => [
+      "Our rewards are loading… unlike your laundry, these points fold themselves.",
+      "Patience pays… literally. Points incoming!",
+      "Good things take time… great rewards take just a few seconds more.",
+      "We’re cooking up your points… they smell like free coffee.",
+      "Your loyalty points are doing a victory lap before arriving.",
+      "Almost there… just bribing the server with cookies.",
+      "Loading… because instant gratification isn’t as fun.",
+      "Hang tight… our hamsters are running as fast as they can.",
+      "Please wait… your rewards are finding a Wi‑Fi signal.",
+      "Progress bar sponsored by your patience.",
+    ],
+    []
+  );
+  const [typed, setTyped] = useState("");
+  const [msgIndex, setMsgIndex] = useState(0);
+  const [phase, setPhase] = useState<"typing" | "pausing" | "deleting">("typing");
+  const typingRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!loading) {
+      // Reset when not loading
+      setTyped("");
+      setMsgIndex(0);
+      setPhase("typing");
+      if (typingRef.current) cancelAnimationFrame(typingRef.current);
+      return;
+    }
+
+    const current = messages[msgIndex % messages.length];
+
+    const tick = () => {
+      if (phase === "typing") {
+        if (typed.length < current.length) {
+          setTyped(current.slice(0, typed.length + 1));
+          typingRef.current = requestAnimationFrame(tick);
+        } else {
+          setPhase("pausing");
+          setTimeout(() => setPhase("deleting"), 1200);
+        }
+      } else if (phase === "deleting") {
+        if (typed.length > 0) {
+          setTyped(current.slice(0, typed.length - 1));
+          typingRef.current = requestAnimationFrame(tick);
+        } else {
+          setMsgIndex((i) => (i + 1) % messages.length);
+          setPhase("typing");
+          typingRef.current = requestAnimationFrame(tick);
+        }
+      }
+    };
+
+    typingRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (typingRef.current) cancelAnimationFrame(typingRef.current);
+    };
+  }, [loading, typed, phase, msgIndex, messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +135,19 @@ export default function SignUp() {
     return (
       <div>
         <OnboardRestaurant onComplete={handleOnboardingComplete} />
-        {loading && <div className="mt-4 text-gray-700 text-sm">Finishing setup...</div>}
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="mx-4 w-full max-w-md rounded-2xl border bg-white p-6 text-center shadow-xl">
+              <div className="mb-3 flex items-center justify-center gap-3">
+                <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#FB7A20]" />
+                <div className="animate-bounce text-2xl">🥊</div>
+              </div>
+              <div className="mb-1 text-sm font-medium text-gray-900">Setting up your business…</div>
+              <div className="min-h-[1.5rem] text-sm text-gray-600">{typed || ""}</div>
+              <div className="mt-4 text-xs text-gray-400">This usually takes just a moment.</div>
+            </div>
+          </div>
+        )}
         {error && <div className="mt-2 text-red-600 text-sm">{error}</div>}
       </div>
     );
