@@ -8,6 +8,31 @@ import { useRouter } from "next/navigation";
 import { addDoc, collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+// Normalize to a single schema. Any missing optional values become null.
+function normalizeRestaurantDoc(input: any, ownerUid: string, ownerName: string, ownerPhone: string, logoUrl: string) {
+  const base = {
+    name: input?.name ?? null,
+    cuisines: Array.isArray(input?.cuisines) ? input.cuisines : input?.cuisine ? [input.cuisine] : [],
+    price: input?.price ?? null,
+    location: input?.location ?? null,
+    coordinates: input?.coordinates ?? null, // { lat, lon } or null
+    hours: input?.hours ?? null,             // map of day->string or null
+    logoUrl: logoUrl || null,
+    timezone: input?.timezone ?? null,
+    // Owner/meta
+    owner: ownerUid,
+    ownerName: ownerName ?? null,
+    ownerPhone: ownerPhone ?? null,
+    createdAt: new Date(),
+  } as any;
+
+  // Force-null undefined so Firestore doesn't reject
+  Object.keys(base).forEach((k) => {
+    if (base[k] === undefined) base[k] = null;
+  });
+  return base;
+}
+
 export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +67,6 @@ export default function SignUp() {
 
   useEffect(() => {
     if (!loading) {
-      // Reset when not loading
       setTyped("");
       setMsgIndex(0);
       setPhase("typing");
@@ -82,7 +106,6 @@ export default function SignUp() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    // Do NOT create user yet; move to onboarding first
     setPendingAccount({ email, password, name, phone });
     setShowOnboard(true);
   };
@@ -92,12 +115,11 @@ export default function SignUp() {
     setLoading(true);
     setError("");
     const overlayStart = Date.now();
-    const MIN_OVERLAY_MS = 2000; // keep the fun message visible briefly
+    const MIN_OVERLAY_MS = 2000;
     try {
-      // 1) Create the auth user now that onboarding is done
       const cred = await createUserWithEmailAndPassword(auth, pendingAccount.email, pendingAccount.password);
 
-      // 2) If a logo file was selected, upload it now with authenticated user
+      // Upload logo if selected
       let finalLogoUrl = restaurantValues.logoUrl || "";
       if (restaurantValues.logoFile) {
         const file: File = restaurantValues.logoFile as File;
@@ -108,28 +130,22 @@ export default function SignUp() {
         finalLogoUrl = await getDownloadURL(snap.ref);
       }
 
-      // 3) Persist restaurant document with owner UID and collected values
+      // Normalize and write to unified 'restaurants' collection
       const { logoFile, ...restValues } = restaurantValues || {};
-      const docData: any = {
-        ...restValues,
-        logoUrl: finalLogoUrl,
-        owner: cred.user.uid,
-        ownerName: pendingAccount.name,
-        ownerPhone: pendingAccount.phone,
-        createdAt: new Date(),
-      };
-      Object.keys(docData).forEach((k) => {
-        if (docData[k] === undefined) delete docData[k];
-      });
-      await addDoc(collection(db, "restaraunts"), docData);
+      const normalized = normalizeRestaurantDoc(
+        restValues,
+        cred.user.uid,
+        pendingAccount.name,
+        pendingAccount.phone,
+        finalLogoUrl
+      );
+      await addDoc(collection(db, "restaurants"), normalized);
 
-      // 4) Ensure the overlay is visible for at least a short time
       const elapsed = Date.now() - overlayStart;
       if (elapsed < MIN_OVERLAY_MS) {
         await new Promise((resolve) => setTimeout(resolve, MIN_OVERLAY_MS - elapsed));
       }
 
-      // 5) Navigate to waitlist
       router.push("/waitlist");
     } catch (err: any) {
       setError(err.message || "Failed to create account");
