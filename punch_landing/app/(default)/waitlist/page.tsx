@@ -81,26 +81,6 @@ export default function Waitlist() {
           <div className="mt-3 text-xs text-gray-500">We rotate these while we finish setting things up.</div>
         </div>
 
-        {/* Next steps */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border bg-white p-5 shadow-sm">
-            <div className="mb-1 text-sm font-semibold">What happens next?</div>
-            <ul className="list-inside list-disc text-sm text-gray-700">
-              <li>We’ll verify your details and enable your dashboard.</li>
-              <li>We’ll email you when it’s live — keep an eye on your inbox.</li>
-              <li>Have a square logo ready (512×512+) for best results.</li>
-            </ul>
-          </div>
-          <div className="rounded-xl border bg-white p-5 shadow-sm">
-            <div className="mb-1 text-sm font-semibold">Want to speed things up?</div>
-            <ul className="list-inside list-disc text-sm text-gray-700">
-              <li>Complete all onboarding steps thoroughly.</li>
-              <li>Reply to any verification emails promptly.</li>
-              <li>Invite your teammates — we’ll prioritize active teams.</li>
-            </ul>
-          </div>
-        </div>
-
         <div className="mt-8 flex flex-wrap gap-3">
           <a href="/" className="btn bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]">Back to Home</a>
           <a href="/signup" className="btn border border-gray-300 text-gray-700 hover:bg-gray-50">Create another</a>
