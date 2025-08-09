@@ -145,7 +145,7 @@ export default function Footer({ border = false }: { border?: boolean }) {
                 >
                   <span className="flex h-8 w-8 items-center justify-center">
                     <svg
-                      className="h-5 w-5 fill-current"
+                      className="h-5 w-5 fill-current transform -translate-y-[1px]"
                       viewBox="0 0 32 32"
                       xmlns="http://www.w3.org/2000/svg"
                     >
