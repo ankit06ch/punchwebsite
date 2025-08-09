@@ -58,7 +58,7 @@ export default function Waitlist() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
-      <div className="mx-auto max-w-2xl px-4 pt-28 pb-16 md:pt-36">
+      <div className="mx-auto max-w-2xl px-4 pt-40 pb-20 md:pt-56 lg:pt-64">
         {/* Header */}
         <div className="mb-6 flex items-start gap-3">
           <div className="text-4xl">🥊</div>
