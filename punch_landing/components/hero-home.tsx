@@ -1,5 +1,6 @@
 import Image from "next/image";
 import PageIllustration from "@/components/page-illustration";
+import HeroScreens from "@/components/hero-screens";
 
 export default function HeroHome() {
   return (
@@ -81,37 +82,8 @@ export default function HeroHome() {
                 <span className="inline-block h-3 w-3 rounded-full bg-yellow-400 border border-yellow-200"></span>
                 <span className="inline-block h-3 w-3 rounded-full bg-green-500 border border-green-300"></span>
               </div>
-              {/* Animated punch card */}
-              <div className="flex flex-col items-center justify-center h-full">
-                <div className="mb-6">
-                  <div className="text-center text-gray-200 text-lg font-semibold mb-2">Punch Card</div>
-                  <div className="flex space-x-3">
-                    {/* 5 punch spots, 1 animates in */}
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={`inline-block h-6 w-6 rounded-full border-2 border-[#FB7A20] bg-gray-800 relative overflow-hidden ${i === 0 ? 'animate-punch-in' : ''}`}
-                      >
-                        {i === 0 && (
-                          <span className="absolute inset-0 flex items-center justify-center text-[#FB7A20] text-xl animate-bounce">🥊</span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                {/* Reward icon animates in */}
-                <div className="flex flex-col items-center mt-2">
-                  <span className="text-3xl animate-reward-pop">🎁</span>
-                  <span className="text-xs text-gray-400 mt-1">Reward</span>
-                </div>
-              </div>
-              {/* Floating notification */}
-              <div className="absolute right-6 top-10 animate-float-notification z-20">
-                <div className="flex items-center rounded-lg bg-white/90 px-4 py-2 shadow-lg border border-gray-200">
-                  <span className="mr-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#FB7A20] text-white font-bold">S</span>
-                  <span className="text-sm text-gray-800 font-medium">Sarah just redeemed a free coffee!</span>
-                </div>
-              </div>
+              {/* Screenshots slideshow */}
+              <HeroScreens />
             </div>
           </div>
         </div>
