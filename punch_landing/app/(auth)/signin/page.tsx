@@ -3,12 +3,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/app/firebase";
+import { useRouter } from "next/navigation";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +18,7 @@ export default function SignIn() {
     setError("");
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Optionally redirect or show success
+      router.push("/waitlist");
     } catch (err: any) {
       setError(err.message || "Failed to sign in");
     } finally {
