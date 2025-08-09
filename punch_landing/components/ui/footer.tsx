@@ -109,7 +109,7 @@ export default function Footer({ border = false }: { border?: boolean }) {
                 >
                   <span className="flex h-8 w-8 items-center justify-center">
                     <svg
-                      className="h-7 w-7 fill-current"
+                      className="h-8 w-8 fill-current"
                       viewBox="0 0 32 32"
                       xmlns="http://www.w3.org/2000/svg"
                     >
@@ -127,7 +127,7 @@ export default function Footer({ border = false }: { border?: boolean }) {
                 >
                   <span className="flex h-8 w-8 items-center justify-center">
                     <svg
-                      className="h-6 w-6 fill-current"
+                      className="h-7 w-7 fill-current"
                       viewBox="0 0 32 32"
                       xmlns="http://www.w3.org/2000/svg"
                     >

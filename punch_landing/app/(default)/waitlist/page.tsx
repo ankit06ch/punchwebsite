@@ -26,33 +26,42 @@ export default function Waitlist() {
   const [typed, setTyped] = useState("");
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<"typing" | "pausing" | "deleting">("typing");
-  const rafRef = useRef<number | null>(null);
+
+  // Typing config
+  const TYPING_INTERVAL_MS = 70; // slow down typing slightly
+  const DELETING_INTERVAL_MS = 55; // slightly slower delete for readability
+  const PAUSE_BEFORE_DELETE_MS = 2000; // add a longer pause before deleting
+
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const current = jokes[index % jokes.length];
-    const tick = () => {
-      if (phase === "typing") {
-        if (typed.length < current.length) {
+
+    // Clear any pending timeouts before scheduling a new one
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    if (phase === "typing") {
+      if (typed.length < current.length) {
+        timeoutRef.current = setTimeout(() => {
           setTyped(current.slice(0, typed.length + 1));
-          rafRef.current = requestAnimationFrame(tick);
-        } else {
-          setPhase("pausing");
-          setTimeout(() => setPhase("deleting"), 1600);
-        }
-      } else if (phase === "deleting") {
-        if (typed.length > 0) {
-          setTyped(current.slice(0, typed.length - 1));
-          rafRef.current = requestAnimationFrame(tick);
-        } else {
-          setIndex((i) => (i + 1) % jokes.length);
-          setPhase("typing");
-          rafRef.current = requestAnimationFrame(tick);
-        }
+        }, TYPING_INTERVAL_MS);
+      } else {
+        setPhase("pausing");
+        timeoutRef.current = setTimeout(() => setPhase("deleting"), PAUSE_BEFORE_DELETE_MS);
       }
-    };
-    rafRef.current = requestAnimationFrame(tick);
+    } else if (phase === "deleting") {
+      if (typed.length > 0) {
+        timeoutRef.current = setTimeout(() => {
+          setTyped(current.slice(0, typed.length - 1));
+        }, DELETING_INTERVAL_MS);
+      } else {
+        setIndex((i) => (i + 1) % jokes.length);
+        setPhase("typing");
+      }
+    }
+
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [typed, phase, index, jokes]);
 
@@ -79,7 +88,7 @@ export default function Waitlist() {
             {typed}
             <span className="ml-1 inline-block h-5 w-[2px] animate-pulse bg-gray-900 align-middle" />
           </div>
-          <div className="mt-3 text-xs text-gray-500">We rotate these while we finish setting things up.</div>
+          {/* Removed per request */}
         </div>
 
         {/* CTAs intentionally removed per request */}
