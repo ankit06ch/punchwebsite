@@ -108,7 +108,7 @@ export default function Footer({ border = false }: { border?: boolean }) {
                   aria-label="X (Twitter)"
                 >
                   <svg
-                    className="h-8 w-8 fill-current"
+                    className="h-8 w-8 fill-current transform scale-[1.15]"
                     viewBox="0 0 32 32"
                     xmlns="http://www.w3.org/2000/svg"
                   >
