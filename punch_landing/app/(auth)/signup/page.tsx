@@ -78,7 +78,7 @@ export default function SignUp() {
   }
 
   return (
-    <>
+    <div className="mx-auto w-full max-w-md">
       <div className="mb-10">
         <h1 className="text-4xl font-bold">Create your account</h1>
       </div>
@@ -110,6 +110,6 @@ export default function SignUp() {
         <span className="text-sm text-gray-700">Already have an account? </span>
         <Link className="text-sm text-[#FB7A20] underline hover:no-underline" href="/login">Sign in</Link>
       </div>
-    </>
+    </div>
   );
 }
