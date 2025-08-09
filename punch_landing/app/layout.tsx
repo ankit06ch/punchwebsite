@@ -17,6 +17,9 @@ export const metadata = {
   icons: {
     icon: "/images/Punch_T/iconT.png",
   },
+  verification: {
+    google: "J6Lt8OPl0Hkyc2SiBTdxX-M2BgcZYbRA6NCD3HNDnHI",
+  },
 };
 
 export default function RootLayout({
