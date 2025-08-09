@@ -44,7 +44,7 @@ export default function FeaturesPlanet() {
             <div className="text-center">
               <div className="relative inline-flex rounded-full before:absolute before:inset-0 before:-z-10 before:scale-[.85] before:animate-[pulse_4s_cubic-bezier(.4,0,.6,1)_infinite] before:bg-linear-to-b before:from-[#FB7A20] before:to-orange-200/50 before:blur-3xl after:absolute after:inset-0 after:rounded-[inherit] after:[background:radial-gradient(closest-side,#FB7A20,transparent)]">
                 <Image
-                  className="rounded-full bg-gray-900"
+                  className="rounded-full bg-gray-900 w-[240px] h-[240px] sm:w-[320px] sm:h-[320px] md:w-[400px] md:h-[400px] object-cover"
                   src="/images/planet.png"
                   width={400}
                   height={400}
