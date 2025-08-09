@@ -132,6 +132,22 @@ export default function Footer({ border = false }: { border?: boolean }) {
                   </svg>
                 </Link>
               </li>
+              <li>
+                <Link
+                  className="flex items-center justify-center text-[#FB7A20] transition hover:text-[#e66a1a]"
+                  href="https://www.linkedin.com/company/punchrewardsapp/"
+                  target="_blank" rel="noopener noreferrer"
+                  aria-label="LinkedIn"
+                >
+                  <svg
+                    className="h-8 w-8 fill-current"
+                    viewBox="0 0 32 32"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M27 0H5C2.79 0 1 1.79 1 4v24c0 2.21 1.79 4 4 4h22c2.21 0 4-1.79 4-4V4c0-2.21-1.79-4-4-4zM10 26H6V12h4v14zM8 10.5C6.62 10.5 5.5 9.38 5.5 8S6.62 5.5 8 5.5 10.5 6.62 10.5 8 9.38 10.5 8 10.5zM26 26h-4v-7.6c0-1.56-.03-3.56-2.17-3.56-2.17 0-2.5 1.7-2.5 3.45V26h-4V12h3.84v1.92h.06c.54-1.01 1.86-2.08 3.82-2.08 4.09 0 4.85 2.69 4.85 6.18V26z" />
+                  </svg>
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
