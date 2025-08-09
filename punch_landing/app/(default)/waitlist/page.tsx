@@ -58,7 +58,8 @@ export default function Waitlist() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
-      <div className="mx-auto max-w-2xl px-4 pt-40 pb-20 md:pt-56 lg:pt-64">
+      <div className="mx-auto max-w-2xl px-4 py-16">
+        <div className="flex min-h-[80vh] flex-col justify-center">
         {/* Header */}
         <div className="mb-6 flex items-start gap-3">
           <div className="text-4xl">🥊</div>
@@ -84,6 +85,7 @@ export default function Waitlist() {
         <div className="mt-8 flex flex-wrap gap-3">
           <a href="/" className="btn bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]">Back to Home</a>
           <a href="/signup" className="btn border border-gray-300 text-gray-700 hover:bg-gray-50">Create another</a>
+        </div>
         </div>
       </div>
     </div>
