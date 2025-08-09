@@ -82,10 +82,7 @@ export default function Waitlist() {
           <div className="mt-3 text-xs text-gray-500">We rotate these while we finish setting things up.</div>
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-3">
-          <a href="/" className="btn bg-[#FB7A20] text-white shadow-sm hover:bg-[#e66a1a]">Back to Home</a>
-          <a href="/signup" className="btn border border-gray-300 text-gray-700 hover:bg-gray-50">Create another</a>
-        </div>
+        {/* CTAs intentionally removed per request */}
         </div>
       </div>
     </div>
