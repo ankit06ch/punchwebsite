@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
+import { CloudArrowUpIcon, MagnifyingGlassIcon, MapPinIcon } from "@heroicons/react/24/outline";
 import { auth, storage } from "@/app/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -304,6 +304,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   };
   const [suggestions, setSuggestions] = useState<Array<GooglePlaceSuggestion>>([]);
   const [isOpenSuggest, setIsOpenSuggest] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const debounceRef = useRef<any>(null);
   const autocompleteService = useRef<any>(null);
   const placesService = useRef<any>(null);
@@ -342,6 +343,8 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     
     debounceRef.current = setTimeout(async () => {
       try {
+        setIsSearching(true);
+        
         if (!window.google || !autocompleteService.current) {
           // Wait for Google Maps to be ready
           if (window.google && window.google.maps && window.google.maps.places) {
@@ -351,6 +354,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
             }
           } else {
             setSuggestions([]);
+            setIsSearching(false);
             return;
           }
         }
@@ -360,6 +364,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           componentRestrictions: { country: 'us' },
           types: ['address', 'establishment']
         }, (predictions: any, status: any) => {
+          setIsSearching(false);
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
             setSuggestions(predictions);
             setIsOpenSuggest(true);
@@ -368,6 +373,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           }
         });
       } catch {
+        setIsSearching(false);
         setSuggestions([]);
       }
     }, 300);
@@ -524,32 +530,73 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           {current.type === "address" && (
             <div className="space-y-3">
               <div className="relative">
-                <input
-                  id={current.key}
-                  name={current.key}
-                  type="text"
-                  placeholder={current.placeholder}
-                  value={query || values[current.key] || ""}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="form-input w-full py-2"
-                  autoFocus
-                  onFocus={() => suggestions.length && setIsOpenSuggest(true)}
-                  onBlur={() => setTimeout(() => setIsOpenSuggest(false), 150)}
-                />
-                {isOpenSuggest && suggestions.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 bg-white/95 backdrop-blur-sm shadow-xl">
-                    {suggestions.map((s) => (
-                      <button
-                        type="button"
-                        key={s.place_id}
-                        onClick={() => chooseSuggestion(s)}
-                        className="block w-full text-left px-4 py-3 text-sm hover:bg-orange-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150"
-                      >
-                        <div className="font-medium text-gray-900">{s.structured_formatting.main_text}</div>
-                        <div className="text-gray-600 text-xs mt-1">{s.structured_formatting.secondary_text}</div>
-                      </button>
-                    ))}
-                  </div>
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <input
+                    id={current.key}
+                    name={current.key}
+                    type="text"
+                    placeholder={current.placeholder}
+                    value={query || values[current.key] || ""}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="form-input w-full pl-10 pr-4 py-3 border-2 border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 rounded-xl"
+                    autoFocus
+                    onFocus={() => suggestions.length && setIsOpenSuggest(true)}
+                    onBlur={() => setTimeout(() => setIsOpenSuggest(false), 150)}
+                  />
+                  {isSearching && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-orange-500"></div>
+                    </div>
+                  )}
+                </div>
+                {isOpenSuggest && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute z-10 mt-2 w-full rounded-2xl border border-gray-200 bg-white/95 backdrop-blur-sm shadow-2xl max-h-80 overflow-hidden"
+                  >
+                    <div className="p-2">
+                      <div className="text-xs font-medium text-gray-500 px-3 py-2 border-b border-gray-100">
+                        Address Suggestions
+                      </div>
+                      {suggestions.length > 0 ? (
+                        suggestions.map((s, index) => (
+                          <motion.button
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            type="button"
+                            key={s.place_id}
+                            onClick={() => chooseSuggestion(s)}
+                            className="block w-full text-left px-4 py-3 text-sm hover:bg-orange-50 hover:shadow-sm rounded-xl transition-all duration-200 group"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0 mt-1">
+                                <MapPinIcon className="h-4 w-4 text-orange-500 group-hover:text-orange-600 transition-colors" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-semibold text-gray-900 group-hover:text-orange-700 transition-colors">
+                                  {s.structured_formatting.main_text}
+                                </div>
+                                <div className="text-gray-600 text-xs mt-1 leading-relaxed">
+                                  {s.structured_formatting.secondary_text}
+                                </div>
+                              </div>
+                            </div>
+                          </motion.button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-6 text-center">
+                          <MapPinIcon className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                          <div className="text-sm text-gray-500">No addresses found</div>
+                          <div className="text-xs text-gray-400 mt-1">Try a different search term</div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
                 )}
               </div>
               <div>
