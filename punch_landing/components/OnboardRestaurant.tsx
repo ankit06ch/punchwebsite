@@ -342,6 +342,22 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     }
   }, []);
 
+  // Handle clicks outside suggestions dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isOpenSuggest && !target.closest('.suggestions-container') && !target.closest('input')) {
+        setIsOpenSuggest(false);
+        setSuggestions([]);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpenSuggest]);
+
   useEffect(() => {
     if (current?.type !== "address") return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -610,7 +626,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute z-10 mt-2 w-full rounded-2xl border border-gray-200 bg-white/95 backdrop-blur-sm shadow-2xl max-h-80 overflow-hidden"
+                    className="suggestions-container absolute z-10 mt-2 w-full rounded-2xl border border-gray-200 bg-white/95 backdrop-blur-sm shadow-2xl max-h-80 overflow-hidden"
                   >
                     <div className="p-2">
                       <div className="text-xs font-medium text-gray-500 px-3 py-2 border-b border-gray-100">
@@ -623,14 +639,15 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                           transition={{ delay: index * 0.05 }}
                           type="button"
                           key={s.place_id}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Immediately hide suggestions
-                            setIsOpenSuggest(false);
-                            setSuggestions([]);
-                            chooseSuggestion(s);
-                          }}
+                                                      onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Immediately hide suggestions
+                              setIsOpenSuggest(false);
+                              setSuggestions([]);
+                              // Call chooseSuggestion after a brief delay to ensure state updates
+                              setTimeout(() => chooseSuggestion(s), 10);
+                            }}
                           className="block w-full text-left px-4 py-3 text-sm hover:bg-orange-50 hover:shadow-sm rounded-xl transition-all duration-200 group"
                         >
                           <div className="flex items-start gap-3">
