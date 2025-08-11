@@ -604,7 +604,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                     </div>
                   )}
                 </div>
-                {isOpenSuggest && (
+                {isOpenSuggest && suggestions.length > 0 && (
                   <motion.div 
                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -616,46 +616,38 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                       <div className="text-xs font-medium text-gray-500 px-3 py-2 border-b border-gray-100">
                         Address Suggestions
                       </div>
-                      {suggestions.length > 0 ? (
-                        suggestions.map((s, index) => (
-                          <motion.button
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            type="button"
-                            key={s.place_id}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              // Immediately hide suggestions
-                              setIsOpenSuggest(false);
-                              setSuggestions([]);
-                              chooseSuggestion(s);
-                            }}
-                            className="block w-full text-left px-4 py-3 text-sm hover:bg-orange-50 hover:shadow-sm rounded-xl transition-all duration-200 group"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0 mt-1">
-                                <MapPinIcon className="h-4 w-4 text-orange-500 group-hover:text-orange-600 transition-colors" />
+                      {suggestions.map((s, index) => (
+                        <motion.button
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          type="button"
+                          key={s.place_id}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Immediately hide suggestions
+                            setIsOpenSuggest(false);
+                            setSuggestions([]);
+                            chooseSuggestion(s);
+                          }}
+                          className="block w-full text-left px-4 py-3 text-sm hover:bg-orange-50 hover:shadow-sm rounded-xl transition-all duration-200 group"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 mt-1">
+                              <MapPinIcon className="h-4 w-4 text-orange-500 group-hover:text-orange-600 transition-colors" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-gray-900 group-hover:text-orange-700 transition-colors">
+                                {s.structured_formatting.main_text}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-gray-900 group-hover:text-orange-700 transition-colors">
-                                  {s.structured_formatting.main_text}
-                                </div>
-                                <div className="text-gray-600 text-xs mt-1 leading-relaxed">
-                                  {s.structured_formatting.secondary_text}
-                                </div>
+                              <div className="text-gray-600 text-xs mt-1 leading-relaxed">
+                                {s.structured_formatting.secondary_text}
                               </div>
                             </div>
-                          </motion.button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-6 text-center">
-                          <MapPinIcon className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                          <div className="text-sm text-gray-500">No addresses found</div>
-                          <div className="text-xs text-gray-400 mt-1">Try a different search term</div>
-                        </div>
-                      )}
+                          </div>
+                        </motion.button>
+                      ))}
                     </div>
                   </motion.div>
                 )}
