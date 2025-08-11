@@ -409,27 +409,13 @@ export default function DashboardPage() {
       <div className={`fixed left-0 top-0 z-40 h-full bg-white shadow-lg transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'}`}>
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200">
+          <div className="flex h-16 items-center px-4 border-b border-gray-200">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold">
                 P
               </div>
               {sidebarOpen && <span className="font-semibold text-gray-900">Punch</span>}
             </div>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              {sidebarOpen ? (
-                <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                </svg>
-              )}
-            </button>
           </div>
 
           {/* Navigation */}
@@ -482,6 +468,30 @@ export default function DashboardPage() {
               ))}
             </ul>
           </nav>
+
+          {/* Expand/Collapse Button */}
+          <div className="border-t border-gray-200 p-4">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+            >
+              {sidebarOpen ? (
+                <>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                  </svg>
+                  <span className="text-sm font-medium">Collapse</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                  </svg>
+                  <span className="text-sm font-medium">Expand</span>
+                </>
+              )}
+            </button>
+          </div>
 
           {/* User Info */}
           <div className="border-t border-gray-200 p-4">
