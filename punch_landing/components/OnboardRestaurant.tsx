@@ -254,11 +254,26 @@ function MapPreview({ lat, lon }: { lat: number; lon: number }) {
   return <MapboxMap lat={lat} lon={lon} />;
 }
 
+// ---------------- Price Conversion ----------------
+function convertToPriceTier(input: string): string {
+  // Remove any non-numeric characters except decimal points
+  const cleanInput = input.replace(/[^0-9.]/g, '');
+  const amount = parseFloat(cleanInput);
+  
+  if (isNaN(amount)) return '';
+  
+  // Convert dollar amount to price tier
+  if (amount <= 10) return '$';
+  if (amount <= 25) return '$$';
+  if (amount <= 50) return '$$$';
+  return '$$$$';
+}
+
 // ---------------- Steps ----------------
 const steps = [
   { key: "name", label: "Business Name", placeholder: "Sushi Town", type: "text" },
   { key: "cuisine", label: "Cuisine and tags", placeholder: "Sushi", type: "cuisines" },
-  { key: "price", label: "Price", placeholder: "$$$", type: "text" },
+  { key: "price", label: "Price (Average Cost)", placeholder: "50 or 50$", type: "text" },
   { key: "location", label: "Address", placeholder: "123 Main St, San Francisco, CA", type: "address" },
   { key: "hours", label: "Hours", type: "hours" },
   { key: "logoUrl", label: "Upload Logo", type: "logo" },
@@ -360,10 +375,20 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
         return;
       }
     } else if (current.key === "price") {
-      if (typeof value !== "string" || !/^\$+$/.test(value)) {
-        setError("Price must contain only dollar signs, e.g. $, $$, $$$.");
+      if (!value || typeof value !== "string") {
+        setError("Please enter a price amount.");
         return;
       }
+      
+      // Convert the input to price tier and store it
+      const priceTier = convertToPriceTier(value);
+      if (!priceTier) {
+        setError("Please enter a valid price amount (e.g., 15, 25$, 50).");
+        return;
+      }
+      
+      // Update the values with the converted price tier
+      setValues((prev: any) => ({ ...prev, price: priceTier }));
     } else if (!value || (current.type === "number" && isNaN(Number(value)))) {
       setError("Please enter a valid value.");
       return;
@@ -511,19 +536,26 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           )}
 
           {current.type !== "hours" && current.type !== "address" && current.type !== "cuisines" && current.type !== "logo" && (
-            <input
-              id={current.key}
-              name={current.key}
-              type={current.type}
-              min={(current as any)?.min}
-              max={(current as any)?.max}
-              step={(current as any)?.step}
-              placeholder={current.placeholder}
-              value={values[current.key] || ""}
-              onChange={handleChange}
-              className="form-input w-full py-2"
-              autoFocus
-            />
+            <div>
+              <input
+                id={current.key}
+                name={current.key}
+                type={current.type}
+                min={(current as any)?.min}
+                max={(current as any)?.max}
+                step={(current as any)?.step}
+                placeholder={current.placeholder}
+                value={values[current.key] || ""}
+                onChange={handleChange}
+                className="form-input w-full py-2"
+                autoFocus
+              />
+              {current.key === "price" && (
+                <div className="mt-1 text-xs text-gray-500">
+                  Enter the average cost of a meal. We'll convert it to a price tier ($, $$, $$$, $$$$).
+                </div>
+              )}
+            </div>
           )}
 
           {error && <div className="text-red-600 text-sm">{error}</div>}

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail } from "firebase/auth";
 import { auth, db, storage } from "@/app/firebase";
 import OnboardRestaurant from "@/components/OnboardRestaurant";
 import { useRouter } from "next/navigation";
@@ -116,7 +116,17 @@ export default function SignUp() {
     setError("");
     const overlayStart = Date.now();
     const MIN_OVERLAY_MS = 2000;
+    
     try {
+      // Check if email already exists before creating account
+      const signInMethods = await fetchSignInMethodsForEmail(auth, pendingAccount.email);
+      if (signInMethods.length > 0) {
+        setError("An account with this email already exists. Please sign in instead.");
+        setShowOnboard(false);
+        setLoading(false);
+        return;
+      }
+      
       const cred = await createUserWithEmailAndPassword(auth, pendingAccount.email, pendingAccount.password);
 
       // Upload logo if selected

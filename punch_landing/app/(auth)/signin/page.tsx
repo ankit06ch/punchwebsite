@@ -27,7 +27,7 @@ export default function SignIn() {
   };
 
   return (
-    <>
+    <div className="mx-auto w-full max-w-md">
       <div className="mb-10">
         <h1 className="text-4xl font-bold">Sign in to your account</h1>
       </div>
@@ -54,6 +54,6 @@ export default function SignIn() {
         <span className="text-sm text-gray-700">New to Punch? </span>
         <Link className="text-sm text-[#FB7A20] underline hover:no-underline" href="/signup">Create an account</Link>
       </div>
-    </>
+    </div>
   );
 }
