@@ -429,6 +429,25 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     });
   };
 
+  // Handle input changes for address field
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setQuery(newValue);
+    
+    // If user is editing, clear coordinates to allow re-selection
+    if (newValue !== values.location) {
+      setValues((prev: any) => ({ 
+        ...prev, 
+        coordinates: null 
+      }));
+    }
+    
+    // Show suggestions if there are any
+    if (suggestions.length > 0) {
+      setIsOpenSuggest(true);
+    }
+  };
+
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -559,7 +578,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                     type="text"
                     placeholder={current.placeholder}
                     value={query || values[current.key] || ""}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={handleAddressChange}
                     className="form-input w-full pl-10 pr-4 py-3 border-2 border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 rounded-xl"
                     autoFocus
                     onFocus={() => {
