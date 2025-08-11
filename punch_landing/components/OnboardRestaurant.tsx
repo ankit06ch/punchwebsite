@@ -292,7 +292,10 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   const current = steps[step];
 
   // Address autocomplete with Google Places API
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => {
+    // Initialize with existing location if available
+    return values.location || "";
+  });
   type GooglePlaceSuggestion = {
     place_id: string;
     description: string;
@@ -309,12 +312,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   const autocompleteService = useRef<any>(null);
   const placesService = useRef<any>(null);
 
-  // Initialize query state when address step is reached
-  useEffect(() => {
-    if (current?.type === "address" && values.location && !query) {
-      setQuery(values.location);
-    }
-  }, [current?.type, values.location, query]);
+
 
   // Load Google Maps script (with global flag to prevent duplicates)
   useEffect(() => {
@@ -437,18 +435,18 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     const newValue = e.target.value;
     setQuery(newValue);
     
-    // If user is editing, clear coordinates to allow re-selection
+    // Clear suggestions when user starts typing
+    if (suggestions.length > 0) {
+      setSuggestions([]);
+      setIsOpenSuggest(false);
+    }
+    
+    // Clear coordinates when user edits (but don't reset query)
     if (newValue !== values.location) {
       setValues((prev: any) => ({ 
         ...prev, 
         coordinates: null 
       }));
-    }
-    
-    // Clear suggestions when user starts typing
-    if (suggestions.length > 0) {
-      setSuggestions([]);
-      setIsOpenSuggest(false);
     }
   };
 
