@@ -403,6 +403,10 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   };
 
   const chooseSuggestion = (s: GooglePlaceSuggestion) => {
+    // Immediately hide suggestions and clear them
+    setIsOpenSuggest(false);
+    setSuggestions([]);
+    
     // Use Places Service to get detailed place information including coordinates
     if (!placesService.current) return;
     
@@ -421,7 +425,6 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           coordinates: { lat, lon: lng } 
         }));
         setQuery(formatted);
-        setIsOpenSuggest(false);
       }
     });
   };
@@ -566,8 +569,12 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                       }
                     }}
                     onBlur={() => {
-                      console.log('Input blurred, hiding suggestions in 150ms');
-                      setTimeout(() => setIsOpenSuggest(false), 150);
+                      console.log('Input blurred, hiding suggestions in 300ms');
+                      // Longer delay to allow click events to complete
+                      setTimeout(() => {
+                        if (!isOpenSuggest) return; // Don't hide if already hidden
+                        setIsOpenSuggest(false);
+                      }, 300);
                     }}
                   />
                   {isSearching && (
@@ -596,7 +603,14 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                             transition={{ delay: index * 0.05 }}
                             type="button"
                             key={s.place_id}
-                            onClick={() => chooseSuggestion(s)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              chooseSuggestion(s);
+                            }}
+                            onMouseDown={(e) => {
+                              e.preventDefault(); // Prevent blur event
+                            }}
                             className="block w-full text-left px-4 py-3 text-sm hover:bg-orange-50 hover:shadow-sm rounded-xl transition-all duration-200 group"
                           >
                             <div className="flex items-start gap-3">
