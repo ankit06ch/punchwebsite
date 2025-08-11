@@ -309,6 +309,13 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   const autocompleteService = useRef<any>(null);
   const placesService = useRef<any>(null);
 
+  // Initialize query state when address step is reached
+  useEffect(() => {
+    if (current?.type === "address" && values.location && !query) {
+      setQuery(values.location);
+    }
+  }, [current?.type, values.location, query]);
+
   // Load Google Maps script (with global flag to prevent duplicates)
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.google && !(window as any).__googleMapsLoading) {
@@ -438,9 +445,10 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
       }));
     }
     
-    // Show suggestions if there are any
+    // Clear suggestions when user starts typing
     if (suggestions.length > 0) {
-      setIsOpenSuggest(true);
+      setSuggestions([]);
+      setIsOpenSuggest(false);
     }
   };
 
@@ -573,7 +581,7 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                     name={current.key}
                     type="text"
                     placeholder={current.placeholder}
-                    value={query || values[current.key] || ""}
+                    value={query}
                     onChange={handleAddressChange}
                     className="form-input w-full pl-10 pr-4 py-3 border-2 border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 rounded-xl"
                     autoFocus
