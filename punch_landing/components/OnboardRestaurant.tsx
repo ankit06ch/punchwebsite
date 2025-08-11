@@ -308,9 +308,11 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   const autocompleteService = useRef<any>(null);
   const placesService = useRef<any>(null);
 
-  // Load Google Maps script
+  // Load Google Maps script (with global flag to prevent duplicates)
   useEffect(() => {
-    if (typeof window !== 'undefined' && !window.google) {
+    if (typeof window !== 'undefined' && !window.google && !(window as any).__googleMapsLoading) {
+      (window as any).__googleMapsLoading = true;
+      
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
       script.async = true;
@@ -321,6 +323,10 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
           autocompleteService.current = new window.google.maps.places.AutocompleteService();
           placesService.current = new window.google.maps.places.PlacesService(document.createElement('div'));
         }
+        (window as any).__googleMapsLoading = false;
+      };
+      script.onerror = () => {
+        (window as any).__googleMapsLoading = false;
       };
       document.head.appendChild(script);
     }
@@ -337,10 +343,12 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     debounceRef.current = setTimeout(async () => {
       try {
         if (!window.google || !autocompleteService.current) {
-          // Initialize Google Places service if not already done
+          // Wait for Google Maps to be ready
           if (window.google && window.google.maps && window.google.maps.places) {
-            autocompleteService.current = new window.google.maps.places.AutocompleteService();
-            placesService.current = new window.google.maps.places.PlacesService(document.createElement('div'));
+            if (!autocompleteService.current) {
+              autocompleteService.current = new window.google.maps.places.AutocompleteService();
+              placesService.current = new window.google.maps.places.PlacesService(document.createElement('div'));
+            }
           } else {
             setSuggestions([]);
             return;
