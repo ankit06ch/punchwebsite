@@ -403,10 +403,6 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
   };
 
   const chooseSuggestion = (s: GooglePlaceSuggestion) => {
-    // Immediately hide suggestions and clear them
-    setIsOpenSuggest(false);
-    setSuggestions([]);
-    
     // Use Places Service to get detailed place information including coordinates
     if (!placesService.current) return;
     
@@ -625,10 +621,10 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
+                              // Immediately hide suggestions
+                              setIsOpenSuggest(false);
+                              setSuggestions([]);
                               chooseSuggestion(s);
-                            }}
-                            onMouseDown={(e) => {
-                              e.preventDefault(); // Prevent blur event
                             }}
                             className="block w-full text-left px-4 py-3 text-sm hover:bg-orange-50 hover:shadow-sm rounded-xl transition-all duration-200 group"
                           >
