@@ -2,10 +2,16 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import mapboxgl from "mapbox-gl";
 import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
 import { auth, storage } from "@/app/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+// Google Maps types
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
 // ---------------- Hours Editor ----------------
 const DAYS: Array<{ key: string; label: string }> = [
@@ -198,51 +204,49 @@ function CuisineTags({ value, onChange }: { value: string[] | undefined; onChang
   );
 }
 
-// ---------------- Map (dark) - Mapbox GL ----------------
-function MapboxMap({ lat, lon }: { lat: number; lon: number }) {
+// ---------------- Google Maps Component ----------------
+function GoogleMap({ lat, lon }: { lat: number; lon: number }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!token) return;
-    mapboxgl.accessToken = token;
-    if (!mapContainerRef.current) return;
-    if (!mapRef.current) {
-      const map = new mapboxgl.Map({
-        container: mapContainerRef.current,
-        style: "mapbox://styles/mapbox/dark-v11",
-        center: [lon, lat],
-        zoom: 14,
-        attributionControl: false,
-      });
-      mapRef.current = map;
-    } else {
-      mapRef.current.setCenter([lon, lat]);
-      mapRef.current.setZoom(14);
-    }
+    if (!mapContainerRef.current || !window.google) return;
+    if (mapRef.current) return;
 
-    if (!markerRef.current) {
-      markerRef.current = new mapboxgl.Marker().setLngLat([lon, lat]).addTo(mapRef.current!);
-    } else {
-      markerRef.current.setLngLat([lon, lat]);
-    }
+    const position = { lat, lng: lon };
+    
+    mapRef.current = new window.google.maps.Map(mapContainerRef.current, {
+      center: position,
+      zoom: 15,
+      mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+      styles: [
+        {
+          featureType: "poi",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }]
+        }
+      ]
+    });
 
-    return () => {
-      // cleanup on unmount only below
-    };
-  }, [lat, lon]);
+    new window.google.maps.Marker({
+      position,
+      map: mapRef.current,
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: "#FB7A20",
+        fillOpacity: 1,
+        strokeColor: "#FFFFFF",
+        strokeWeight: 2
+      }
+    });
 
-  useEffect(() => {
     return () => {
       if (mapRef.current) {
-        mapRef.current.remove();
         mapRef.current = null;
       }
-      markerRef.current = null;
     };
-  }, []);
+  }, [lat, lon]);
 
   return <div ref={mapContainerRef} className="h-56 w-full overflow-hidden rounded-lg border" />;
 }
@@ -251,7 +255,7 @@ function MapPreview({ lat, lon }: { lat: number; lon: number }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return <div className="h-56 w-full overflow-hidden rounded-lg border" />;
-  return <MapboxMap lat={lat} lon={lon} />;
+  return <GoogleMap lat={lat} lon={lon} />;
 }
 
 // ---------------- Price Conversion ----------------
@@ -287,19 +291,40 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
 
   const current = steps[step];
 
-  // Address autocomplete
+  // Address autocomplete with Google Places API
   const [query, setQuery] = useState("");
-  type NominatimSuggestion = {
-    display_name: string;
-    lat: string;
-    lon: string;
-    type?: string;
-    class?: string;
-    address?: Record<string, string>;
+  type GooglePlaceSuggestion = {
+    place_id: string;
+    description: string;
+    structured_formatting: {
+      main_text: string;
+      secondary_text: string;
+    };
+    types: string[];
   };
-  const [suggestions, setSuggestions] = useState<Array<NominatimSuggestion>>([]);
+  const [suggestions, setSuggestions] = useState<Array<GooglePlaceSuggestion>>([]);
   const [isOpenSuggest, setIsOpenSuggest] = useState(false);
   const debounceRef = useRef<any>(null);
+  const autocompleteService = useRef<any>(null);
+  const placesService = useRef<any>(null);
+
+  // Load Google Maps script
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.google) {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        // Initialize services after script loads
+        if (window.google && window.google.maps && window.google.maps.places) {
+          autocompleteService.current = new window.google.maps.places.AutocompleteService();
+          placesService.current = new window.google.maps.places.PlacesService(document.createElement('div'));
+        }
+      };
+      document.head.appendChild(script);
+    }
+  }, []);
 
   useEffect(() => {
     if (current?.type !== "address") return;
@@ -308,24 +333,32 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
       setSuggestions([]);
       return;
     }
+    
     debounceRef.current = setTimeout(async () => {
       try {
-        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=us&q=${encodeURIComponent(
-          query
-        )}&limit=8&dedupe=1&accept-language=en`;
-        const res = await fetch(url, { headers: { "Accept": "application/json" } });
-        const data = await res.json();
-        const arr = Array.isArray(data) ? (data as NominatimSuggestion[]) : [];
-        // Prefer registerable address-like items (have road and either house number or postcode)
-        const filtered = arr.filter((s) => {
-          const a = s.address || {};
-          const hasRoad = Boolean(a.road);
-          const hasNumberOrPostcode = Boolean(a.house_number) || Boolean(a.postcode);
-          const avoidIntersections = !/(junction|traffic_signals|bus_stop|stop)/i.test(s.type || "");
-          return hasRoad && hasNumberOrPostcode && avoidIntersections;
+        if (!window.google || !autocompleteService.current) {
+          // Initialize Google Places service if not already done
+          if (window.google && window.google.maps && window.google.maps.places) {
+            autocompleteService.current = new window.google.maps.places.AutocompleteService();
+            placesService.current = new window.google.maps.places.PlacesService(document.createElement('div'));
+          } else {
+            setSuggestions([]);
+            return;
+          }
+        }
+
+        autocompleteService.current.getPlacePredictions({
+          input: query,
+          componentRestrictions: { country: 'us' },
+          types: ['address', 'establishment']
+        }, (predictions: any, status: any) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setSuggestions(predictions);
+            setIsOpenSuggest(true);
+          } else {
+            setSuggestions([]);
+          }
         });
-        setSuggestions(filtered);
-        setIsOpenSuggest(true);
       } catch {
         setSuggestions([]);
       }
@@ -333,25 +366,32 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
     return () => debounceRef.current && clearTimeout(debounceRef.current);
   }, [query, current?.type]);
 
-  const formatAddress = (s: NominatimSuggestion): string => {
-    const a = s.address || {};
-    const line1 = [a.house_number, a.road].filter(Boolean).join(" ");
-    const city = a.city || a.town || a.village || a.hamlet || a.suburb;
-    const state = a.state || a.state_district || a.region;
-    const postal = a.postcode;
-    const country = a.country;
-    return [line1 || s.display_name, [city, state].filter(Boolean).join(", "), [postal, country].filter(Boolean).join(" ")]
-      .filter(Boolean)
-      .join(", ");
+  const formatAddress = (s: GooglePlaceSuggestion): string => {
+    return s.description;
   };
 
-  const chooseSuggestion = (s: NominatimSuggestion) => {
-    const lat = parseFloat(s.lat);
-    const lon = parseFloat(s.lon);
-    const formatted = formatAddress(s);
-    setValues((prev: any) => ({ ...prev, location: formatted, coordinates: { lat, lon } }));
-    setQuery(formatted);
-    setIsOpenSuggest(false);
+  const chooseSuggestion = (s: GooglePlaceSuggestion) => {
+    // Use Places Service to get detailed place information including coordinates
+    if (!placesService.current) return;
+    
+    placesService.current.getDetails({
+      placeId: s.place_id,
+      fields: ['geometry', 'formatted_address']
+    }, (place: any, status: any) => {
+      if (status === window.google.maps.places.PlacesServiceStatus.OK && place && place.geometry?.location) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        const formatted = place.formatted_address || s.description;
+        
+        setValues((prev: any) => ({ 
+          ...prev, 
+          location: formatted, 
+          coordinates: { lat, lon: lng } 
+        }));
+        setQuery(formatted);
+        setIsOpenSuggest(false);
+      }
+    });
   };
 
   const handleNext = async (e: React.FormEvent) => {
@@ -489,15 +529,16 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                   onBlur={() => setTimeout(() => setIsOpenSuggest(false), 150)}
                 />
                 {isOpenSuggest && suggestions.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg">
+                  <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 bg-white/95 backdrop-blur-sm shadow-xl">
                     {suggestions.map((s) => (
                       <button
                         type="button"
-                        key={`${s.lat}-${s.lon}`}
+                        key={s.place_id}
                         onClick={() => chooseSuggestion(s)}
-                        className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                        className="block w-full text-left px-4 py-3 text-sm hover:bg-orange-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150"
                       >
-                        {s.display_name}
+                        <div className="font-medium text-gray-900">{s.structured_formatting.main_text}</div>
+                        <div className="text-gray-600 text-xs mt-1">{s.structured_formatting.secondary_text}</div>
                       </button>
                     ))}
                   </div>
