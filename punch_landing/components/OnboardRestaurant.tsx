@@ -319,10 +319,14 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
       script.async = true;
       script.defer = true;
       script.onload = () => {
+        console.log('Google Maps script loaded successfully');
         // Initialize services after script loads
         if (window.google && window.google.maps && window.google.maps.places) {
           autocompleteService.current = new window.google.maps.places.AutocompleteService();
           placesService.current = new window.google.maps.places.PlacesService(document.createElement('div'));
+          console.log('Google Places services initialized');
+        } else {
+          console.log('Google Maps not available after script load');
         }
         (window as any).__googleMapsLoading = false;
       };
@@ -346,13 +350,22 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
         setIsSearching(true);
         
         if (!window.google || !autocompleteService.current) {
+          console.log('Google Maps status:', { 
+            google: !!window.google, 
+            maps: !!(window.google?.maps), 
+            places: !!(window.google?.maps?.places),
+            autocompleteService: !!autocompleteService.current 
+          });
+          
           // Wait for Google Maps to be ready
           if (window.google && window.google.maps && window.google.maps.places) {
             if (!autocompleteService.current) {
               autocompleteService.current = new window.google.maps.places.AutocompleteService();
               placesService.current = new window.google.maps.places.PlacesService(document.createElement('div'));
+              console.log('Services created during search');
             }
           } else {
+            console.log('Google Maps not ready, aborting search');
             setSuggestions([]);
             setIsSearching(false);
             return;
@@ -362,14 +375,19 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
         autocompleteService.current.getPlacePredictions({
           input: query,
           componentRestrictions: { country: 'us' },
-          types: ['address', 'establishment']
+          types: ['address']
         }, (predictions: any, status: any) => {
           setIsSearching(false);
+          console.log('Google Places API response:', { status, predictions: predictions?.length || 0 });
+          
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
             setSuggestions(predictions);
             setIsOpenSuggest(true);
+            console.log('Suggestions set:', predictions.length);
           } else {
+            console.log('No predictions or error status:', status);
             setSuggestions([]);
+            setIsOpenSuggest(false);
           }
         });
       } catch {
@@ -541,8 +559,16 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
                     onChange={(e) => setQuery(e.target.value)}
                     className="form-input w-full pl-10 pr-4 py-3 border-2 border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200 rounded-xl"
                     autoFocus
-                    onFocus={() => suggestions.length && setIsOpenSuggest(true)}
-                    onBlur={() => setTimeout(() => setIsOpenSuggest(false), 150)}
+                    onFocus={() => {
+                      console.log('Input focused, suggestions count:', suggestions.length);
+                      if (suggestions.length > 0) {
+                        setIsOpenSuggest(true);
+                      }
+                    }}
+                    onBlur={() => {
+                      console.log('Input blurred, hiding suggestions in 150ms');
+                      setTimeout(() => setIsOpenSuggest(false), 150);
+                    }}
                   />
                   {isSearching && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
