@@ -24,8 +24,9 @@ const DAYS: Array<{ key: string; label: string }> = [
   { key: "Sun", label: "Sunday" },
 ];
 
-function formatTimeRange(open: string, close: string): string {
-  if (!open || !close) return "";
+function formatTimeRange(timeRanges: Array<{ open: string; close: string }>): string {
+  if (!timeRanges || timeRanges.length === 0) return "";
+  
   const to12h = (t: string) => {
     const [hStr, m] = t.split(":");
     let h = parseInt(hStr, 10);
@@ -33,19 +34,22 @@ function formatTimeRange(open: string, close: string): string {
     h = h % 12;
     if (h === 0) h = 12;
     return `${h}:${m} ${ampm}`;
-    };
-  return `${to12h(open)} – ${to12h(close)}`;
+  };
+  
+  return timeRanges
+    .map(range => `${to12h(range.open)} – ${to12h(range.close)}`)
+    .join(", ");
 }
 
 function HoursEditor({ value, onChange }: { value: Record<string, string> | undefined; onChange: (v: Record<string, string>) => void }) {
-  const [local, setLocal] = useState<Record<string, { closed: boolean; open: string; close: string }>>(() => {
-    const initial: Record<string, { closed: boolean; open: string; close: string }> = {};
+  const [local, setLocal] = useState<Record<string, { closed: boolean; timeRanges: Array<{ open: string; close: string }> }>>(() => {
+    const initial: Record<string, { closed: boolean; timeRanges: Array<{ open: string; close: string }> }> = {};
     DAYS.forEach((d) => {
       const existing = value?.[d.key];
       if (!existing || existing === "Closed") {
-        initial[d.key] = { closed: !existing ? true : existing === "Closed", open: "09:00", close: "17:30" };
+        initial[d.key] = { closed: !existing ? true : existing === "Closed", timeRanges: [{ open: "09:00", close: "17:30" }] };
       } else {
-        initial[d.key] = { closed: false, open: "09:00", close: "17:30" };
+        initial[d.key] = { closed: false, timeRanges: [{ open: "09:00", close: "17:30" }] };
       }
     });
     return initial;
@@ -66,49 +70,112 @@ function HoursEditor({ value, onChange }: { value: Record<string, string> | unde
     const out: Record<string, string> = {};
     for (const day of DAYS) {
       const d = local[day.key];
-      out[day.key] = d.closed ? "Closed" : formatTimeRange(d.open, d.close);
+      out[day.key] = d.closed ? "Closed" : formatTimeRange(d.timeRanges);
     }
     onChange(out);
   }, [local, onChange]);
+
+  const addTimeRange = (dayKey: string) => {
+    setLocal((prev) => ({
+      ...prev,
+      [dayKey]: {
+        ...prev[dayKey],
+        timeRanges: [...(prev[dayKey]?.timeRanges || []), { open: "09:00", close: "17:30" }]
+      }
+    }));
+  };
+
+  const removeTimeRange = (dayKey: string, index: number) => {
+    setLocal((prev) => ({
+      ...prev,
+      [dayKey]: {
+        ...prev[dayKey],
+        timeRanges: prev[dayKey]?.timeRanges.filter((_, i) => i !== index) || []
+      }
+    }));
+  };
+
+  const updateTimeRange = (dayKey: string, index: number, field: 'open' | 'close', value: string) => {
+    setLocal((prev) => ({
+      ...prev,
+      [dayKey]: {
+        ...prev[dayKey],
+        timeRanges: prev[dayKey]?.timeRanges.map((range, i) => 
+          i === index ? { ...range, [field]: value } : range
+        ) || []
+      }
+    }));
+  };
 
   return (
     <div className="w-full">
       <div className="divide-y rounded-2xl border bg-white p-2 sm:p-4">
         {DAYS.map((d) => {
           const isClosed = local[d.key]?.closed;
+          const timeRanges = local[d.key]?.timeRanges || [];
+          
           return (
-            <div key={d.key} className="grid grid-cols-1 md:grid-cols-12 items-center gap-4 p-4">
-              <div className="md:col-span-4 flex items-center gap-4">
-                <Switch
-                  checked={!local[d.key]?.closed}
-                  onToggle={() => setLocal((prev) => ({
-                    ...prev,
-                    [d.key]: {
-                      ...(prev[d.key] || { open: "09:00", close: "17:30" }),
-                      closed: !(prev[d.key]?.closed ?? true),
-                    },
-                  }))}
-                />
-                <span className={`text-base ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
+            <div key={d.key} className="space-y-4 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Switch
+                    checked={!isClosed}
+                    onToggle={() => setLocal((prev) => ({
+                      ...prev,
+                      [d.key]: {
+                        ...(prev[d.key] || { timeRanges: [{ open: "09:00", close: "17:30" }] }),
+                        closed: !(prev[d.key]?.closed ?? true),
+                      },
+                    }))}
+                  />
+                  <span className={`text-base ${isClosed ? "text-gray-500" : "text-gray-900"}`}>{d.label}</span>
+                </div>
+                {!isClosed && (
+                  <button
+                    type="button"
+                    onClick={() => addTimeRange(d.key)}
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 hover:bg-orange-200 text-orange-600 hover:text-orange-700 transition-colors"
+                    title="Add another time range"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </button>
+                )}
               </div>
-              <div className="md:col-span-4">
-                <input
-                  type="time"
-                  className={`form-input w-full rounded-md py-3 ${isClosed ? "opacity-50" : ""}`}
-                  disabled={isClosed}
-                  value={local[d.key]?.open || "09:00"}
-                  onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, close: "17:30" }), open: e.target.value } }))}
-                />
-              </div>
-              <div className="md:col-span-4">
-                <input
-                  type="time"
-                  className={`form-input w-full rounded-md py-3 ${isClosed ? "opacity-50" : ""}`}
-                  disabled={isClosed}
-                  value={local[d.key]?.close || "17:30"}
-                  onChange={(e) => setLocal((prev) => ({ ...prev, [d.key]: { ...(prev[d.key] || { closed: false, open: "09:00" }), close: e.target.value } }))}
-                />
-              </div>
+              
+              {!isClosed && timeRanges.map((range, index) => (
+                <div key={index} className="flex items-center gap-4 ml-8">
+                  <div className="flex-1">
+                    <input
+                      type="time"
+                      className="form-input w-full rounded-md py-3"
+                      value={range.open}
+                      onChange={(e) => updateTimeRange(d.key, index, 'open', e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="time"
+                      className="form-input w-full rounded-md py-3"
+                      value={range.close}
+                      onChange={(e) => updateTimeRange(d.key, index, 'close', e.target.value)}
+                    />
+                  </div>
+                  {timeRanges.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeTimeRange(d.key, index)}
+                      className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-700 transition-colors"
+                      title="Remove this time range"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           );
         })}
@@ -475,6 +542,16 @@ export default function OnboardRestaurant({ onComplete }: { onComplete: (values:
       if (!value || Object.keys(value).length !== 7) {
         setError("Please configure hours for all days.");
         return;
+      }
+      // Check that each day has valid time ranges (not just "Closed")
+      for (const dayKey of Object.keys(value)) {
+        if (value[dayKey] !== "Closed") {
+          const timeRanges = value[dayKey];
+          if (!timeRanges || timeRanges.length === 0) {
+            setError("Please configure valid time ranges for all open days.");
+            return;
+          }
+        }
       }
     } else if (current.type === "address") {
       if (!values.coordinates) {
